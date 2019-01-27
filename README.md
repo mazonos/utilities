@@ -1,7 +1,7 @@
 # utilities
 Aqui você encontra todos os scripts criados especialmente para a mazonOS
 
-### setup
+### setup -----NÃO TERMINADO
 **Instalador que faz todo o processo de:**
 * Criar partição / Formatar e Montar. 
 * Baixar tarball da distribuição e descompactar
