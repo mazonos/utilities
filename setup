@@ -1,0 +1,230 @@
+#!/usr/bin/env bash
+#=====================HEADER=========================================|
+#CREATE DATE 27/01/2019
+#
+#AUTHOR
+# Jefferson 'slackjeff' Rocha <root@slackjeff.com.br>
+#
+#DESCRIPTION
+# Simple Installer mazonOS
+#
+#LICENSE
+# MIT
+#====================================================================|
+
+#======================VARIABLES
+# Link download distribuition
+#readonly link='https://downloads.sourceforge.net/project/mazonos/mazonos_alpha.tar.bzip2'
+readonly link='http://127.0.0.1/mazon_brasil' # local test
+name_download_archive='mazon_brasil'
+temp=$(mktemp -d -p /mnt/ 2>/dev/null) # Create a temp directory for mount
+
+# Colors
+red='\033[31;1m'
+blue='\033[34;1m'
+end='\033[m'
+
+#======================TEST
+[[ "$UID" -ne "0" ]] && { echo "Root required!"; exit 1 ;}
+
+#======================FUNCTIONS
+
+_LOGO() # Logo of mazonos
+{
+    clear
+    echo -e "$red"
+    cat << EOF
+
+███╗   ███╗ █████╗ ███████╗ ██████╗ ███╗   ██╗ ██████╗ ███████╗
+████╗ ████║██╔══██╗╚══███╔╝██╔═══██╗████╗  ██║██╔═══██╗██╔════╝
+██╔████╔██║███████║  ███╔╝ ██║   ██║██╔██╗ ██║██║   ██║███████╗
+██║╚██╔╝██║██╔══██║ ███╔╝  ██║   ██║██║╚██╗██║██║   ██║╚════██║
+██║ ╚═╝ ██║██║  ██║███████╗╚██████╔╝██║ ╚████║╚██████╔╝███████║
+╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝ ╚══════╝
+
+EOF
+    echo -e "$end"
+}
+
+_CONTINUE() # Exibe mensagem para o usuário com ENTER.
+{
+    echo -e "$red"
+    read -p "$@" enter
+    echo -e "$end"
+}
+
+_LIST_AND_CHECK() # Função de listagem de menu e dispositivos
+{
+    # Local variables
+    local choice
+    local archive="$(mktemp)"
+    local MAIN_DEVICE="${MAIN_DEVICE/#\/dev\//}"
+
+    _CONTINUE "$@"
+    lsblk -l "$DEVICE" | awk 'OFS="\t" {print $1,$4}'  > "$archive"
+    local DEVICE="${DEVICE/#\/dev\//}"
+
+    # Imprimindo no STDOUT
+        i=0
+        while IFS= read line; do
+            if [[ "$line" =~ ^$DEVICE[0-9] ]]; then
+                i="$(($i+1))"
+                [[ "$i" = '1' ]] && s="1" # Pegando o primeiro número
+                select_device[$i]="$line" # Pegando dispositivo
+                echo "[$i] $line"         # printando na tela com incremento
+            else
+               continue
+            fi
+        done < "$archive"
+        [[ -z "$s" ]] && { echo -e "\nDo you no have Partitions"; exit 1 ;}
+        echo -e "${blue}"
+        read -p "Choice your Partition [${s}-${i}]: " PARTITION
+        echo -e "${end}"
+        if [[ -z "$PARTITION" ]]; then
+            echo -e "!!! NEXT TIME U ENTER A NULL INPUT, I FORMAT YOUR / :) !!!\n"
+            return 1
+        fi
+        # Pegando somente o dispositivo
+        DEVICE_CHOICE=$(echo "${select_device[$PARTITION]}" | awk '{print $1}')
+        # Usuário não digitou algo?
+        [[ -z "$DEVICE_CHOICE" ]] && { echo "Wrong Option"; return 1 ;}
+        DEVICE_CHOICE="${DEVICE_CHOICE/#\/dev\//}" # Se string começar com /dev/ corte!
+        DEVICE_CHOICE="/dev/${DEVICE_CHOICE}"      # adicionando /dev/ no inicio
+        if [[ ! -e "${DEVICE_CHOICE}" ]]; then
+            echo "Device $DEVICE_CHOICE not found."
+            return 1
+        fi
+        _UMOUNT "$DEVICE_CHOICE" # Umount baby
+        return 0
+}
+
+_CFDISK() # Create Partition
+{
+    _CONTINUE ">>>> Create a new(ers) partitions [PRESS ENTER] "
+    cfdisk "$DEVICE"
+    return 0
+}
+
+_MKFS() # Partição para limpeza
+{
+        local MSG='>>>> Format your(s) Partitions [PRESS ENTER] '
+
+        # Chamada da função para listar e faze checagem
+        while true; do
+            _LIST_AND_CHECK "$MSG " && break || continue
+        done
+        while true; do
+            mkfs -v -t ext4 "$DEVICE_CHOICE"
+            read -p $'\033[34;1mHAVE A MORE PARTITIONS TO FORMAT!? [Y/n]\033[m ' choice
+            echo
+            choice="${choice,,}" # Tudo em minusculo
+            choice="${choice:=y}" # Se deu enter y por padrão.
+            [[ "$choice" = 'n' ]] && break # Apertou n já eras.
+            _LIST_AND_CHECK "$MSG "
+        done
+}
+
+_MOUNT()
+{
+    while true; do
+        _LIST_AND_CHECK ">>>> Insert your device root / [PRESS ENTER] " && break || continue
+    done
+    while true; do
+        if [[ -z "$DEVICE_CHOICE" ]]; then
+            continue
+        elif [[ ! -e "$DEVICE" ]]; then
+            echo -e "${blue}${DEVICE} not exist!${end}"
+            continue
+        else
+            break
+        fi
+    done
+    _UMOUNT "$DEVICE_CHOICE" # Desmonte baby!    
+    if mount "$DEVICE_CHOICE" "${temp}"; then
+        echo "${DEVICE_CHOICE} monted on ${temp}"
+    else
+        echo "${DEVICE_CHOICE} not monted on ${temp}, ABORTED."
+        exit 22
+    fi
+}
+
+_UMOUNT() # Umount device baby
+{
+    umount "$@" &>/dev/null # Umount device baby
+}
+
+_DOWNLOAD() # Download archive
+{
+    local ihere="$PWD"
+
+    echo -e "\n=========================================================="
+    echo -e "${red}Download a iso in:${end} ${ihere}"
+    echo -e "${red}Take a pop-corn, go watch movies and let Daddy work.${end}"
+    echo "=========================================================="
+
+    if ! wget "$link" --show-progress --progress=bar --quiet --continue -O "$name_download_archive"; then
+        echo "Download not complete."
+        exit 1
+    fi
+}
+
+_DESCOMPACT()
+{
+    _CONTINUE ">>>> Unzipping files in: $temp [PRESS ENTER]"
+    # Archive exist?
+    if [[ ! -e "$name_download_archive" ]]; then
+        echo "Archive "$name_download_archive" not found! Aborted."
+        exit 1
+    fi
+
+    tar -xvjpf "$name_download_archive" -C "$temp" || exit 1
+}
+
+_MOUNT_SPECIAL()
+{
+    # List especial directories
+    especial_dirs=('proc' 'sys' 'dev')
+
+    _CONTINUE ">>>> Mounting special directories: ${especial_dirs[@]}"
+    for mount_me in "${especial_dirs[@]}"; do
+        if [[ "$mount_me" = *proc* ]]; then
+            mount --type "${mount_me}" "/${mount_me}" "${temp}/${mount_me}" || exit 1
+        else
+            mount --rbind "/${mount_me}" "${temp}/${mount_me}" || exit 1
+        fi
+    done
+    return 0
+}
+
+#======================START
+# Verify params
+case $1 in # Check a params
+    -d|--device) # Take a device
+        _LOGO
+        shift # down!
+        DEVICE="$1" # Take device
+        DEVICE="${DEVICE/#\/dev\//}" # if string start /dev/ cut.
+        DEVICE="/dev/${DEVICE}"      # Clean
+        MAIN_DEVICE="$1"
+        echo -e "${blue}"
+        read -p "Confirm your device? ${DEVICE} [Y/n] " choice
+        echo -e "${end}"
+        choice="${choice,,}"  # all string in lower
+        choice="${choice:=y}" # set var 'n/no' default
+        [[ $choice != 'y' ]] && exit 0 # n? bye bye
+        # Device exist? no? bye bro.
+        [[ ! -e "$DEVICE" ]] && { echo "Device $DEVICE no exist!"; exit 1 ;} 
+        _UMOUNT "$DEVICE" # Umount baby! (6)
+        _CFDISK # Call function cfdisk
+        _MKFS   # Call mkfs
+        _MOUNT  # Call mount
+        cd "${temp}" # Enter on / monted
+        _DOWNLOAD
+        _DESCOMPACT
+        _MOUNT_SPECIAL
+    ;;
+
+    -666) echo "Slackjeff Love u"; exit 0 ;;
+
+    *) echo "Hey, pass a options -h, --help for help!"; exit 0 ;;
+esac
