@@ -65,8 +65,6 @@ interfaces=( # List possibles interfaces
 # Have interface in system?
 [[ -z "${interfaces[@]}" ]] && { echo "Your system no have Interface."; exit 1 ;}
 
-exit
-
 # Print on STDOUT list of interfaces on SYSTEM
 i=0 # Increment var
 echo -e "[?] - Help\n"
