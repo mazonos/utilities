@@ -12,24 +12,27 @@
 # MIT
 #====================================================================|
 
-#======================VARIABLES
-# Link download distribuition
+#======================VARIAVES
+# Link de Download do compactado
 #readonly link='https://downloads.sourceforge.net/project/mazonos/mazonos_alpha.tar.bzip2'
-readonly link='http://127.0.0.1/mazon_brasil' # local test
+readonly link='http://127.0.0.1/mazon_brasil' # Link de teste
 name_download_archive='mazon_brasil'
-temp=$(mktemp -d -p /mnt/ 2>/dev/null) # Create a temp directory for mount
+temp='/mnt/mazon' # Create a temp directory for mount
 
-# Colors
+# Cores
 red='\033[31;1m'
 blue='\033[34;1m'
 end='\033[m'
 
-#======================TEST
+#======================TESTE
 [[ "$UID" -ne "0" ]] && { echo "Root required!"; exit 1 ;}
 
-#======================FUNCTIONS
+# Se não existir ponto de montagem criar!
+[[ ! -e "$temp" ]] && mkdir "$temp"
 
-_LOGO() # Logo of mazonos
+#======================FUNCOES
+
+_LOGO() # Logo mazonos
 {
     clear
     echo -e "$red"
@@ -48,9 +51,17 @@ EOF
 
 _CONTINUE() # Exibe mensagem para o usuário com ENTER.
 {
-    echo -e "$red"
-    read -p "$@" enter
-    echo -e "$end"
+    # Se estiver na parte de descompactação necessita
+    # cair na primeira condição!
+    if [[ "$@" =~ ^'>>>> Unzipping files in:'.* ]] ||     \
+       [[ "$@" =~ ^'>>>> Edit /etc/fstab'.* ]]     ||     \
+       [[ "$@" =~ ^'PRESS ENTER for login chroot!' ]]; then
+        echo -e "$red"
+        read -p "$@" enter
+        echo -e "$end"
+    else
+        echo -e "${red}$@${end}"
+    fi
 }
 
 _LIST_AND_CHECK() # Função de listagem de menu e dispositivos
@@ -100,14 +111,14 @@ _LIST_AND_CHECK() # Função de listagem de menu e dispositivos
 
 _CFDISK() # Create Partition
 {
-    _CONTINUE ">>>> Create a new(ers) partitions [PRESS ENTER] "
+    _CONTINUE '>>>> Create a new(ers) partitions'
     cfdisk "$DEVICE"
     return 0
 }
 
 _MKFS() # Partição para limpeza
 {
-        local MSG='>>>> Format your(s) Partitions [PRESS ENTER] '
+        local MSG='>>>> Format your(s) Partitions'
 
         # Chamada da função para listar e faze checagem
         while true; do
@@ -127,7 +138,7 @@ _MKFS() # Partição para limpeza
 _MOUNT()
 {
     while true; do
-        _LIST_AND_CHECK ">>>> Insert your device root / [PRESS ENTER] " && break || continue
+        _LIST_AND_CHECK '>>>> Insert your device root /\n' && break || continue
     done
     while true; do
         if [[ -z "$DEVICE_CHOICE" ]]; then
@@ -160,7 +171,7 @@ _DOWNLOAD() # Download archive
     echo -e "\n=========================================================="
     echo -e "${red}Download a iso in:${end} ${ihere}"
     echo -e "${red}Take a pop-corn, go watch movies and let Daddy work.${end}"
-    echo "=========================================================="
+    echo -e "==========================================================\n"
 
     if ! wget "$link" --show-progress --progress=bar --quiet --continue -O "$name_download_archive"; then
         echo "Download not complete."
@@ -176,11 +187,10 @@ _DESCOMPACT()
         echo "Archive "$name_download_archive" not found! Aborted."
         exit 1
     fi
-
     tar -xvjpf "$name_download_archive" -C "$temp" || exit 1
 }
 
-_MOUNT_SPECIAL()
+_MOUNT_SPECIAL() # Montagem de dispositivos especiais (proc, sys, dev)
 {
     # Lista de diretórios especiais
     especial_dirs=('proc' 'sys' 'dev')
@@ -198,10 +208,67 @@ _MOUNT_SPECIAL()
     return 0
 }
 
+_FSTAB()
+{
+    # Variáveis locais
+    local hierarchy="${temp}/etc/fstab"
+    local EDITOR='vim' # Escolha do editor padrão para abrir /etc/fstab
+
+    cd "$temp"
+    _CONTINUE ">>>> Edit /etc/fstab [PRESS ENTER]"
+    [[ ! -e "$hierarchy" ]] && { echo "$hierarchy do not exist!"; exit 1 ;}
+    $EDITOR "$hierarchy" # Abrindo /etc/fstab
+}
+
+_CHROOT()
+{
+    _CONTINUE '>>>> Enter in chroot'
+    if [[ "$PWD" != "$temp" ]]; then
+        cd "$temp" && chroot .
+    else
+        chroot .
+    fi
+}
+
+_GRUB()
+{
+    _CONTINUE '>>>> Grub Install'
+    echo -e "${blue}"
+    cat <<EOF
+!!!! Now you will be in chroot for adjust details of grub !!!!
+
+>>>>>>> ( DUAL BOOT USING EXISTING GRUB )
+- If you want to do a dual boot with another system that already has grub exit 
+the chroot with "exit" and unmount the partitions with:
+
+exit
+umount -Rl ${temp}
+update-grub
+
+>>>>>>> ( BOOT USING MazonOS GRUB )
+If your unique system is MazonOS:
+
+- Install grub in your disk:
+grub-install ${MAIN_DEVICE}
+
+- Create grub.cfg:
+grub-mkconfig -o /boot/grub/grub.cfg
+
+- Exit chroot and unmount the partitions:
+exit
+umount -Rl ${temp}
+
+- Reboot your system and enjoy MazonOS.
+EOF
+    echo -e "${end}"
+    _CONTINUE "PRESS ENTER for login chroot!"
+    _CHROOT
+}
+
 #======================START
 # Verify params
-case $1 in # Check a params
-    -d|--device) # Take a device
+case $1 in # Checagem de parâmetros
+    -d|--device)
         _LOGO
         shift # down!
         DEVICE="$1" # Take device
@@ -224,6 +291,9 @@ case $1 in # Check a params
         _DOWNLOAD
         _DESCOMPACT
         _MOUNT_SPECIAL
+        _FSTAB
+        _GRUB
+        _UMOUNT "$DEVICE_CHOICE"
     ;;
 
     -666) echo "Slackjeff Love u"; exit 0 ;;
