@@ -182,10 +182,12 @@ _DESCOMPACT()
 
 _MOUNT_SPECIAL()
 {
-    # List especial directories
+    # Lista de diretórios especiais
     especial_dirs=('proc' 'sys' 'dev')
+    # Para imprimir na tela de entrada
+    print_especial_dirs="$(echo "${especial_dirs[@]}")"
 
-    _CONTINUE ">>>> Mounting special directories: ${especial_dirs[@]}"
+    _CONTINUE ">>>> Mounting special directories: $print_especial_dirs"
     for mount_me in "${especial_dirs[@]}"; do
         if [[ "$mount_me" = *proc* ]]; then
             mount --type "${mount_me}" "/${mount_me}" "${temp}/${mount_me}" || exit 1
