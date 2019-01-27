@@ -96,3 +96,5 @@ case $CHOICE in
     xfce)     _SEND "exec dbus-launch --exit-with-session ${select_me_path[$CHOICE_NUMBER]}" ;;
     wmaker)   _SEND "exec dbus-launch --exit-with-session ${select_me_path[$CHOICE_NUMBER]}" ;;
 esac
+
+echo -e "${blue}Your new interface is: ${red}${CHOICE}${end} ${red},${end} ${blue}Please run ${red}startx${end} ${blue}for up your interface${end}"
