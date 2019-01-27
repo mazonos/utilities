@@ -4,6 +4,8 @@ Aqui você encontra todos os scripts criados especialmente para a mazonOS
 ## Licença
 MIT
 
+## Programas disponíveis
+
 ### setup -----NÃO TERMINADO
 **Instalador que faz todo o processo de:**
 * Criar partição / Formatar e Montar. 
@@ -11,6 +13,8 @@ MIT
 * Montar os diretórios especiais (sys,dev e proc)
 * Entrar como chroot
 * Editar arquivo fstab em /etc
+
+-----
 
 ### chwm
 **Gerenciador de interfaces, inspirado no xwmconfig da distribuição Slackware. Interfaces suportadas**
