@@ -258,7 +258,7 @@ grub-mkconfig -o /boot/grub/grub.cfg
 exit
 umount -Rl ${temp}
 
-- Reboot your system and enjoy MazonOS.
+- Reboot your system and enjoy MazonOS...
 EOF
     echo -e "${end}"
     _CONTINUE "PRESS ENTER for login chroot!"
