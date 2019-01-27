@@ -1,6 +1,9 @@
 # utilities
 Aqui você encontra todos os scripts criados especialmente para a mazonOS
 
+## Licença
+MIT
+
 ### setup -----NÃO TERMINADO
 **Instalador que faz todo o processo de:**
 * Criar partição / Formatar e Montar. 
@@ -17,3 +20,4 @@ Aqui você encontra todos os scripts criados especialmente para a mazonOS
 * Wmaker
 * Blackbox
 * Flubox
+
