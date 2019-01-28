@@ -6,7 +6,7 @@ MIT
 
 ## Programas disponíveis
 
-### setup -----NÃO TERMINADO
+### setup
 **Instalador que faz todo o processo de:**
 * Criar partição / Formatar e Montar. 
 * Baixar tarball da distribuição e descompactar
@@ -25,3 +25,10 @@ MIT
 * Blackbox
 * Flubox
 
+-----
+
+### burnpkg
+
+-----
+
+### createpkg
