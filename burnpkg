@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+#=====================HEADER=========================================|
+#AUTOR
+# Jefferson 'slackjeff' Rocha <root@slackjeff.com.br>
+#
+#LICENCE
+# MIT
+#
+#Package
+# name-version-architeture.mz
+#
+#VERSION
+# 1.0
+#====================================================================|
+
+#===================VARIAVEIS
+dirlist='/var/log/list'
+red='\033[31;1m'
+blue='\033[34;1m'
+end='\033[m'
+
+#===================TESTES
+[[ -z "$1" ]] && { echo "-h, --help"; exit 1 ;} # Sem parametros?
+
+#===================FUNCOES
+# Função para listagem de lista
+_PKG_CONF()
+{
+    cd "$dirlist"
+    for search_pack in *; do
+        if [[ "$search_pack" =~ ^${pack}-.*.list ]]; then
+            echo -e "${blue}[Found]${end} $search_pack"
+            list="$search_pack" # Pegando para jogar no _BURN
+            _BURN # Chamada função para remoção.            
+        fi
+    done
+}
+
+_BURN()
+{
+   (
+    cd "/" # Entrando na raiz
+    #AC = Arquivo
+    #ED = Diretorio Vazio
+
+    # Removendo arquivos normais
+    # Depois do loop estar completo ele vai para
+    # remoção de diretórios vazios
+    a='0' # Variavel incremento arquivos
+    d='0' # Variavel incremento diretorios vazios
+    while IFS= read archive; do
+        [[ "$archive" =~ ^\/$ ]] && continue # Raiz? Roda roda.
+        if [[ -f "$archive" ]]; then
+            if rm "$archive" 2>/dev/null; then
+                a="$(($a + 1))"
+                echo -e "${red}Burned AC${end}\t${archive}"   
+                archive="$(echo "$archive" | sed 's|/|\\/|g')"
+                sed -i "/\b${archive}\b/d" "${dirlist}/${list}"
+            fi
+        fi
+    done < "${dirlist}/${list}" # Recebendo de _PKG_CONF
+
+    # Tirando todo conteudo da var para ser reaproveitada
+    unset archive
+
+    # Removendo diretórios vazios
+    while IFS= read archive; do
+        [[ "$archive" =~ ^\/$ ]] && continue # Raiz? Roda roda.
+        if [[ -d "$archive" ]]; then
+            if [[ -z "$(ls -A ${archive})" ]]; then 
+                if rmdir "${archive}" 2>/dev/null; then
+                   d="$(( $d + 1 ))"
+                   echo -e "${blue}Burned ED${end}\t${archive}"   
+                   archive="$(echo "$archive" | sed 's|/|\\/|g')"
+                   sed -i "/\b${archive}\b/d" "${dirlist}/${list}"
+                fi 
+            fi
+        fi
+    done < "${dirlist}/${list}" # Recebendo de _PKG_CONF
+
+    # Impressão na tela
+    echo -e "\n=======> ${red}BURNED${end} $a Archives and $d Empty Directories"
+    if [[ "$a" -gt '0' ]] || [[ "$d" -gt '0' ]]; then
+        total="$(( $a + $d ))"
+        echo -e "=======> ${red}TOTAL BURNED${end} $total Archives."
+    fi
+   ) # Subshell
+   return 0
+}
+
+case $1 in
+    -b|--burn)
+        shift # Rebaixa baby
+        while [[ -n "$1" ]]; do
+            pack="$1"
+            _PKG_CONF "$pack"
+            shift
+        done
+    ;;
+esac

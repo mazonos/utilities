@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+#=====================HEADER=========================================|
+#AUTOR
+# Jefferson 'slackjeff' Rocha <root@slackjeff.com.br>
+#
+#LICENCE
+# MIT
+#
+#Package
+# name-version-architeture.mz
+#
+#VERSION
+# 1.0
+#====================================================================|
+
+#===============VARIAVEIS
+format_pkg='.mz'
+local_list="var/log/list/"
+temp_list="/tmp/${list_archive}.temp"
+#========Colors
+red='\033[31;1m'
+blue='\033[34;1m'
+cyan='\033[36;1m'
+pink='\033[35;1m'
+end='\033[m'
+
+#===============FUNCOES
+_LIST_ARCHIVES_DIRECTORIES()
+{
+    echo -e "${blue}[Create]${end} ${package}.list in temporary local: $temp_list"
+    # Pegando todos arquivos que possui no diretório
+    # menos os listados abaixo, isso implica em futuros erros.
+    find .                        \
+       \( ! -name / \)            \
+       \( ! -name . \)            \
+       \( ! -name bin \)          \
+       \( ! -name boot \)         \
+       \( ! -name dev \)          \
+       \( ! -name etc \)          \
+       \( ! -name home \)         \
+       \( ! -name lib \)          \
+       \( ! -name lib64 \)        \
+       \( ! -name lost+found \)   \
+       \( ! -name media \)        \
+       \( ! -name mnt \)          \
+       \( ! -name opt \)          \
+       \( ! -name proc \)         \
+       \( ! -name root \)         \
+       \( ! -name run \)          \
+       \( ! -name sbin \)         \
+       \( ! -name srv \)          \
+       \( ! -name sys \)          \
+       \( ! -name tmp \)          \
+       \( ! -name usr \)          \
+       \( ! -name var \)          \
+      -print > "$temp_list"
+}
+
+# Função para fazer a limpa na (pacote).list
+# Para ter a certeza absoluta que não haverá problemas ;)
+# Se caso o arquivo ou diretório estiver solto ele será
+# removido.
+_CLEAN_LIST()
+{
+    echo -e "${cyan}[Clean]${end} List: $temp_list"
+    # Apagando linhas desnecessárias na lista
+    sed -i '
+        s/^\.\///g
+        s/^\///g
+        /^\./d
+        /^ *$/d
+        /^var\/log\/list\/.*\.list/d
+    ' "$temp_list"
+}
+
+_CREATE_PKG()
+{
+    echo -e "${blue}[Create]${end} Now, create package for You! Wait..."
+    if tar cvJf ../${package}${format_pkg} .; then
+        echo -e "${blue}[Create]${end} Your Package on: ../${package}${format_pkg}"
+        ( # Subshell
+          cd ..
+          if sha256sum ${package}${format_pkg} > ${package}${format_pkg}.sha256; then
+              echo -e "${blue}[Create]${end} Your MD5 on: ../${package}${format_pkg}.sha256"
+          fi
+        )
+    else
+        echo -e "${red}[Error!]${end} No created ../${package}${format_pkg}"
+        exit 1
+    fi
+}
+
+#==================INICIO
+case $1 in
+    -n|--name)
+         shift # Rebaixando
+         if ! [[ "$1" =~ ^.*$format_pkg ]]; then
+             echo -e "${red}[Error!]${end} Package need finish $format_pkg"
+             exit 1
+         elif [[ "$(echo "$1" | grep -o '-' | wc -l)" -gt '2' ]]; then
+             echo -e "${red}[Error!]${end} Unexpected ' - ' Count."
+             echo "Use only two ' - ' In the name of your package."
+             echo ""
+             echo -e "Perfect Format name is: ${blue}name-version-architeture.mz${end}"
+             echo "If you need separate name of package prefer use ' _ '"
+             echo -e "Example: firefox_quantum${blue}-${end}54.8.9${blue}-${end}x86_64.mz"
+             echo ""
+             echo "If you need more help, use -h or --help"
+             exit 1
+         else
+             package="${1/%.mz/}"
+         fi
+         # Iniciando processo de listagem de diretório
+         # e limpeza no arquivo de listagem
+         _LIST_ARCHIVES_DIRECTORIES || exit 1
+         _CLEAN_LIST || exit 1
+         # Criando diretorio para armazenar listagem
+         [[ ! -d "$local_list" ]] && mkdir -p "$local_list"
+         (
+           cd "$local_list" || exit 1
+           cp "$temp_list" "${package}.list" || exit 1
+           echo -e "${pink}[MOVED]${end} $temp_list for ${local_list}${package}.list"
+         )
+         # Iniciando processo de criação do pacote
+exit
+         _CREATE_PKG || exit 1
+    ;;
+    *) echo "-h, --help"; exit 1 ;;
+esac
