@@ -10,7 +10,12 @@
 # name-version-architeture.mz
 #
 #VERSION
-# 1.0
+# 1.1
+#
+#CHANGELOG
+# (VERSÃO 1.1) - Jefferson Rocha
+#   - FIXADO, agora ao terminar de remover tudo é excluido a lista 
+#   de referencia em /var/log/list/pacote
 #====================================================================|
 
 #===================VARIAVEIS
@@ -128,6 +133,9 @@ _BURN()
         total="$(( $a + $d ))"
         echo -e "=======> ${red}TOTAL BURNED${end} $total Archives."
     fi
+
+    # Removendo lista
+    [[ -e "${dirlist}/${list}" ]] && rm "${dirlist}/${list}" 1>/dev/null 2>&1
    ) # Subshell
    return 0
 }
