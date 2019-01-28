@@ -11,6 +11,10 @@
 #
 #VERSION
 # 1.0
+#
+#CHANGELOG
+# (VERSÃO 1.1) - Jefferson Rocha
+#  - Agora o programa cria somente a lista se caso necessitar.
 #====================================================================|
 
 #===============VARIAVEIS
@@ -34,6 +38,9 @@ OPÇÕES:
 
 -n, --name
   NomeDoPacote-Versão-Arquitetura.mz
+
+-c, --create-list
+  NomeDoPacote-Versão-Arquitetura
 
 -h, --help
   Exibe essa ajuda e sai
@@ -64,10 +71,21 @@ COMO USAR?
 
   createpkg -n "google_chrome-64.5.9.2-x86_64.mz"
 
+LISTAS
+
+  No processo de empacotamento é gerado uma lista de todos arquivos contidos no diretório
+  do programa que você está empacotando. Está lista é armazenada dentro do pacote em:
+  var/log/list/Programa-versao-arquitetura.list
+ 
+  Está lista é de extrema importância para remover o programa e seus arquivos com o
+  utilitário burnpkg. E também desta maneira você tem um controle do que está em seu sistema
+
 AUTOR
+
   Jefferson 'Slackjeff' Rocha <root@slackjeff.com.br>
 
 LICENÇA
+
   MIT
 EOF
 }
@@ -140,36 +158,58 @@ _CREATE_PKG()
 #==================INICIO
 case $1 in
     -n|--name)
-         shift # Rebaixando
-         if ! [[ "$1" =~ ^.*$format_pkg ]]; then
-             echo -e "${red}[Error!]${end} Package need finish $format_pkg"
-             exit 1
-         elif [[ "$(echo "$1" | grep -o '-' | wc -l)" -gt '2' ]]; then
-             echo -e "${red}[Error!]${end} Unexpected ' - ' Count."
-             echo "Use only two ' - ' In the name of your package."
-             echo ""
-             echo -e "Perfect Format name is: ${blue}name-version-architeture.mz${end}"
-             echo "If you need separate name of package prefer use ' _ '"
-             echo -e "Example: firefox_quantum${blue}-${end}54.8.9${blue}-${end}x86_64.mz"
-             echo ""
-             echo "If you need more help, use -h or --help"
-             exit 1
-         else
+       shift # Rebaixando
+       if ! [[ "$1" =~ ^.*$format_pkg ]]; then
+           echo -e "${red}[Error!]${end} Package need finish $format_pkg"
+           exit 1
+       elif [[ "$(echo "$1" | grep -o '-' | wc -l)" -gt '2' || "$(echo "$1" | grep -o '-' | wc -l)" -lt '2'  ]]; then
+           echo -e "${red}[Error!]${end} Unexpected ' - ' Count."
+           echo "Use only two ' - ' In the name of your package."
+           echo ""
+           echo -e "Perfect Format name is: ${blue}name-version-architeture.mz${end}"
+           echo "If you need separate name of package prefer use ' _ '"
+           echo -e "Example: firefox_quantum${blue}-${end}54.8.9${blue}-${end}x86_64.mz"
+           echo ""
+           echo "If you need more help, use -h or --help"
+           exit 1
+       else
              package="${1/%.mz/}"
-         fi
+       fi
          # Iniciando processo de listagem de diretório
          # e limpeza no arquivo de listagem
          _LIST_ARCHIVES_DIRECTORIES || exit 1
          _CLEAN_LIST || exit 1
          # Criando diretorio para armazenar listagem
          [[ ! -d "$local_list" ]] && mkdir -p "$local_list"
-         (
+         ( # Subshell
            cd "$local_list" || exit 1
            cp "$temp_list" "${package}.list" || exit 1
            echo -e "${pink}[MOVED]${end} $temp_list for ${local_list}${package}.list"
          )
          # Iniciando processo de criação do pacote
          _CREATE_PKG || exit 1
+    ;;
+
+    -c|--create-list)
+       shift # Rebaixando
+       if [[ "$(echo "$1" | grep -o '-' | wc -l)" -gt '2' || "$(echo "$1" | grep -o '-' | wc -l)" -lt '2'  ]]; then
+           echo -e "${red}[Error!]${end} Unexpected ' - ' Count."
+           echo "Use only two ' - ' In the name of your package."
+           echo ""
+           echo -e "Perfect Format name is: ${blue}name-version-architeture.mz${end}"
+           echo "If you need separate name of package prefer use ' _ '"
+           echo -e "Example: firefox_quantum${blue}-${end}54.8.9${blue}-${end}x86_64"
+           echo ""
+           echo "If you need more help, use -h or --help"
+           exit 1
+       elif [[ -z "$1" ]]; then
+           echo -e "Name of list? Example: firefox_quantum${blue}-${end}54.8.9${blue}-${end}x86_64"
+           exit 1
+       else
+           _LIST_ARCHIVES_DIRECTORIES || exit 1
+           _CLEAN_LIST || exit 1
+           mv -v "$temp_list" ${1}.list
+       fi
     ;;
 
     -h|--help) _HELP_pt; exit 0 ;;
