@@ -25,6 +25,53 @@ pink='\033[35;1m'
 end='\033[m'
 
 #===============FUNCOES
+_HELP_pt()
+{
+    cat <<EOF | less
+createpkg - Simples ferramenta para empacotamento
+
+OPÇÕES:
+
+-n, --name
+  NomeDoPacote-Versão-Arquitetura.mz
+
+-h, --help
+  Exibe essa ajuda e sai
+
+COMO USAR?
+
+  Para usar o createpkg é NECESSÁRIO após você fazer o fakeroot
+  do programa que você compilou entrar dentro do mesmo. Após isso
+  você pode executar com o parâmetro -n ou --name e o nome do pacote.
+  Um Exemplo básico! Supondo que você acabou de compilar e fez um fakeroot em
+  /tmp/build/firefox_quantum54.0, olhando dentro do diretório todos diretórios
+  subdiretórios e arquivos estão presentes no mesmo.
+ 
+  Após fazer a manipulação, inserindo e talvez retirando coisas, chegou a hora
+  de rodar o createpkg para criar um simples pacote! Execute como root:
+
+  # createpkg -n "firefox_quantum-54.0-x86_64.mz"
+  
+  Serão gerados dois arquivos um diretório acima que são eles:
+  "firefox_quantum-54.0-x86_64.mz" e "firefox_quantum-54.0-x86_64.sha256"
+  
+  NOTA!
+  O nome do pacote não deve exceder mais de 2 traços ( - ), eles são os divisores
+  do nome do pacote para a versão do pacote e da versão do pacote para arquitetura
+  e somente isto!
+  Se caso vocẽ necessitar separar o nome do pacote como google chrome, não use - prefira
+  usar o ( _ ), exemplo:
+
+  createpkg -n "google_chrome-64.5.9.2-x86_64.mz"
+
+AUTOR
+  Jefferson 'Slackjeff' Rocha <root@slackjeff.com.br>
+
+LICENÇA
+  MIT
+EOF
+}
+
 _LIST_ARCHIVES_DIRECTORIES()
 {
     echo -e "${blue}[Create]${end} ${package}.list in temporary local: $temp_list"
@@ -122,8 +169,9 @@ case $1 in
            echo -e "${pink}[MOVED]${end} $temp_list for ${local_list}${package}.list"
          )
          # Iniciando processo de criação do pacote
-exit
          _CREATE_PKG || exit 1
     ;;
+
+    -h|--help) _HELP_pt; exit 0 ;;
     *) echo "-h, --help"; exit 1 ;;
 esac

@@ -23,6 +23,50 @@ end='\033[m'
 [[ -z "$1" ]] && { echo "-h, --help"; exit 1 ;} # Sem parametros?
 
 #===================FUNCOES
+
+_HELP_pt()
+{
+    cat <<EOF | less
+burnpkg - Simples ferramenta para remover um pacote do sistema
+
+OPÇÕES:
+
+-b, --burn
+  NomeDoPacote
+
+-h, --help
+  Exibe essa ajuda e sai
+
+COMO USAR?
+
+  Supondo que você queira remover um pacote do sistema, para este
+  exemplo vamos por o google_chrome, você executaria como root:
+
+  # burnpkg google_chrome
+
+  E o resto o programa faz para você! Todos arquivos e diretórios
+  são removidos daquele determinado programa. Mas lembre-se cada
+  pacote é cada pacote, então mesmo que removemos o pacote X os pacotes
+  necessários para o programa X funcionar não serão removidos pelo burnpkg.
+  Está é sua tarefa.
+  
+  NOTA!
+  Caso o programa que você pesquisou não retornar nada é sinal que não existe
+  aquele determinado programa no sistema.
+
+LISTAS
+
+  Todas as listas dos pacotes que você criou com o utilitário createpkg fica
+  em /var/log/list/ , burnpkg faz a conferência desta pasta!   
+
+AUTOR
+  Jefferson 'Slackjeff' Rocha <root@slackjeff.com.br>
+
+LICENÇA
+  MIT
+EOF
+}
+
 # Função para listagem de lista
 _PKG_CONF()
 {
@@ -97,4 +141,6 @@ case $1 in
             shift
         done
     ;;
+
+    -h|--help) _HELP_pt; exit 0;;
 esac
