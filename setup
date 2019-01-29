@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #=====================HEADER=========================================|
-#CREATE DATE 27/01/2019
+#CREATE DATE 26/01/2019
 #
 #AUTHOR
 # Jefferson 'slackjeff' Rocha <root@slackjeff.com.br>
@@ -14,8 +14,8 @@
 
 #======================VARIAVES
 # Link de Download do compactado
-#readonly link='https://downloads.sourceforge.net/project/mazonos/mazonos_alpha.tar.bzip2'
-readonly link='http://127.0.0.1/mazon_brasil' # Link de teste
+readonly link='https://downloads.sourceforge.net/project/mazonos/mazonos-alpha01.tar.bzip2'
+#readonly link='http://127.0.0.1/mazon_brasil' # Link de teste
 name_download_archive='mazon_brasil'
 temp='/mnt/mazon' # Create a temp directory for mount
 
