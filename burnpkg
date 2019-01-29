@@ -10,12 +10,18 @@
 # name-version-architeture.mz
 #
 #VERSION
-# 1.1
+# 1.2
 #
 #CHANGELOG
 # (VERSÃO 1.1) - Jefferson Rocha
 #   - FIXADO, agora ao terminar de remover tudo é excluido a lista 
 #   de referencia em /var/log/list/pacote
+#
+# (VERSÃO 1.2) - Jefferson Rocha
+#   - Quando o usuario pede pra remover um pacote e ter mais de um
+#   nome igual é exibido na tela.
+#   - Entrada no -b, --burn não poderá ter caracteres # @ * ,
+#
 #====================================================================|
 
 #===================VARIAVEIS
@@ -80,14 +86,32 @@ _PKG_CONF()
         if [[ "$search_pack" =~ ^${pack}-[0-9]+.*\.list ]]; then
             echo -e "${blue}[Found]${end} $search_pack"
             list="$search_pack" # Pegando para jogar no _BURN
-            _BURN # Chamada função para remoção.            
+            _BURN # Chamada função para remoção.
+            return
+        else
+            # Vamos fazer uma conferencia se existi algum pacote
+            # que tem o nome no formato que o usuario pediu.
+            count='0'
+            for temp_pack in *; do
+                # Se existir ao menos 1 pacote com o nome, a contadora
+                # é incrementada
+                [[ "$temp_pack" =~ ^${pack}.* ]] && { count=$(( $count + 1 )) ;}
+            done
+            if [[ "$count" -gt '0' ]]; then # Se for maior tem pacotes com este nome
+                echo -e "${red}[ALTERNATIVES]${end} Following packages with this name were found\n"
+                ls ${pack}* | cut -d '-' -f 1-2
+                return
+            else
+                echo -e "${red}[NOT FOUND]${end} ${pack}"
+                return
+            fi
         fi
     done
 }
 
 _BURN()
 {
-   (
+   ( # Subshell
     cd "/" # Entrando na raiz
     #AC = Arquivo
     #ED = Diretorio Vazio
@@ -134,11 +158,14 @@ _BURN()
     # Removendo lista
     rm "${dirlist}/${list}" 1>/dev/null 2>&1
    ) # Subshell
+   return 0
 }
 case $1 in
 
     -b|--burn)
         shift # Rebaixa baby
+        # Se contiver um dos caracteres da lista, não poderá continuar.
+        [[ "$1" =~ .*(\*|@|#|,).* ]] && { echo 'Dont Use * or @ or #'; exit 1 ;}
         while [[ -n "$1" ]]; do
             pack="$1"
             _PKG_CONF
