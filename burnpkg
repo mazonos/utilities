@@ -77,7 +77,7 @@ _PKG_CONF()
 {
     cd "$dirlist"
     for search_pack in *; do
-        if [[ "$search_pack" =~ ^${pack}-.*.list ]]; then
+        if [[ "$search_pack" =~ ^${pack}-[0-9]+.*\.list ]]; then
             echo -e "${blue}[Found]${end} $search_pack"
             list="$search_pack" # Pegando para jogar no _BURN
             _BURN # Chamada função para remoção.            
@@ -98,13 +98,12 @@ _BURN()
     a='0' # Variavel incremento arquivos
     d='0' # Variavel incremento diretorios vazios
     while IFS= read archive; do
-        [[ "$archive" =~ ^\/$ ]] && continue # Raiz? Roda roda.
         if [[ -f "$archive" ]]; then
             if rm "$archive" 2>/dev/null; then
                 a="$(($a + 1))"
                 echo -e "${red}Burned AC${end}\t${archive}"   
                 archive="$(echo "$archive" | sed 's|/|\\/|g')"
-                sed -i "/\b${archive}\b/d" "${dirlist}/${list}"
+                #sed -i "/\b${archive}\b/d" "${dirlist}/${list}"
             fi
         fi
     done < "${dirlist}/${list}" # Recebendo de _PKG_CONF
@@ -114,40 +113,38 @@ _BURN()
 
     # Removendo diretórios vazios
     while IFS= read archive; do
-        [[ "$archive" =~ ^\/$ ]] && continue # Raiz? Roda roda.
         if [[ -d "$archive" ]]; then
             if [[ -z "$(ls -A ${archive})" ]]; then 
                 if rmdir "${archive}" 2>/dev/null; then
                    d="$(( $d + 1 ))"
                    echo -e "${blue}Burned ED${end}\t${archive}"   
                    archive="$(echo "$archive" | sed 's|/|\\/|g')"
-                   sed -i "/\b${archive}\b/d" "${dirlist}/${list}"
+                   #sed -i "/\b${archive}\b/d" "${dirlist}/${list}"
                 fi 
             fi
         fi
     done < "${dirlist}/${list}" # Recebendo de _PKG_CONF
 
     # Impressão na tela
-    echo -e "\n=======> ${red}BURNED${end} $a Archives and $d Empty Directories"
     if [[ "$a" -gt '0' ]] || [[ "$d" -gt '0' ]]; then
         total="$(( $a + $d ))"
-        echo -e "=======> ${red}TOTAL BURNED${end} $total Archives."
+        echo -e "\n=======> ${red}TOTAL BURNED${end} $total Archives."
+        echo -e "=======> ${red}BURNED${end} $a Archives and $d Empty Directories"
     fi
-
     # Removendo lista
-    [[ -e "${dirlist}/${list}" ]] && rm "${dirlist}/${list}" 1>/dev/null 2>&1
+    rm "${dirlist}/${list}" 1>/dev/null 2>&1
    ) # Subshell
-   return 0
 }
-
 case $1 in
+
     -b|--burn)
         shift # Rebaixa baby
         while [[ -n "$1" ]]; do
             pack="$1"
-            _PKG_CONF "$pack"
+            _PKG_CONF
             shift
         done
+        exit 0
     ;;
 
     -h|--help) _HELP_pt; exit 0;;

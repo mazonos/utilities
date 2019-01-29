@@ -96,8 +96,6 @@ _LIST_ARCHIVES_DIRECTORIES()
     # Pegando todos arquivos que possui no diretório
     # menos os listados abaixo, isso implica em futuros erros.
     find .                        \
-       \( ! -name / \)            \
-       \( ! -name . \)            \
        \( ! -name bin \)          \
        \( ! -name boot \)         \
        \( ! -name dev \)          \
