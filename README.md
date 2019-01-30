@@ -27,8 +27,12 @@ MIT
 
 -----
 
-### burnpkg
+### burnpkg (Remover pacote)
 
 -----
 
-### createpkg
+### createpkg (Criar Pacote)
+
+-----
+
+### planpkg (Instalar Pacote)
