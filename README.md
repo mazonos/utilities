@@ -35,4 +35,4 @@ MIT
 
 -----
 
-### planpkg (Instalar Pacote)
+### plantpkg (Instalar Pacote)
