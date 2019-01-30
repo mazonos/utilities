@@ -22,10 +22,8 @@
 #====================================================================|
 
 #===============VARIAVEIS
-format_pkg='.mz'            # Extensão
+format_pkg='mz'            # Extensão do pacote
 local_list="var/log/list/"  # Localização da lista
-local_desc="var/log/desc/"  # Localização da descrição
-temp_list="/tmp/${list_archive}.temp"
 #========Colors
 red='\033[31;1m'
 blue='\033[34;1m'
@@ -44,6 +42,11 @@ var_list=(
 )
 for hellclean in "${var_list[@]}"; do
     unset "${hellclean}"
+done
+
+# Criando diretórios se não existirem.
+for createdir in '/var/log/list' '/var/log/desc'; do
+    [[ ! -d "$createdir" ]] && mkdir -p "$createdir"
 done
 
 #===============FUNCOES
@@ -78,7 +81,7 @@ COMO USAR?
   # createpkg -n "firefox_quantum-54.0.mz"
   
   Serão gerados dois arquivos um diretório acima que são eles:
-  "firefox_quantum-54.0-x86_64.mz" e "firefox_quantum-54.0.sha256"
+  "firefox_quantum-54.0.mz" e "firefox_quantum-54.0.sha256"
   
   NOTA!
   O nome do pacote não deve exceder mais de 2 traços ( - ), eles são os divisores
@@ -196,6 +199,7 @@ _LIST_ARCHIVES_DIRECTORIES()
        \( ! -name tmp \)          \
        \( ! -name usr \)          \
        \( ! -name var \)          \
+       \( ! -name info \)         \
       -print > "$temp_list"
 }
 
@@ -207,28 +211,31 @@ _CLEAN_LIST()
 {
     echo -e "${cyan}[Clean]${end} List: $temp_list"
     # Apagando linhas desnecessárias na lista
-    sed -i '
+    # E substituindo
+    sed -i "
         s/^\.\///g
         s/^\///g
         /^\./d
         /^ *$/d
         /^var\/log\/list\/.*\.list/d
-    ' "$temp_list"
+        /^var\/log$/d
+        s|info\/desc|var\/log\/desc\/${package}.desc|
+    " "$temp_list"
 }
 
 _CREATE_PKG()
 {
     echo -e "${blue}[Create]${end} Now, create package for You! Wait..."
-    if tar cvJf ../${package}${format_pkg} .; then
-        echo -e "${blue}[Create]${end} Your Package on: ../${package}${format_pkg}"
+    if tar cvJf ../${package}.${format_pkg} .; then
+        echo -e "${blue}[Create]${end} Your Package on: ../${package}.${format_pkg}"
         ( # Subshell
           cd ..
-          if sha256sum ${package}${format_pkg} > ${package}${format_pkg}.sha256; then
-              echo -e "${blue}[Create]${end} Your MD5 on: ../${package}${format_pkg}.sha256"
+          if sha256sum ${package}.${format_pkg} > ${package}.${format_pkg}.sha256; then
+              echo -e "${blue}[Create]${end} Your MD5 on: ../${package}.${format_pkg}.sha256"
           fi
         )
     else
-        echo -e "${red}[Error!]${end} No created ../${package}${format_pkg}"
+        echo -e "${red}[Error!]${end} No created ../${package}.${format_pkg}"
         exit 1
     fi
 }
@@ -239,8 +246,9 @@ case $1 in
        shift # Rebaixando
        # Se nome do pacote não for letras ou se tiver
        # espaços entre outras coisas, não pode continuar.
-       if ! [[ "$1" =~ ^.*$format_pkg ]]; then
-           echo -e "${red}[Error!]${end} Package need finish $format_pkg"
+       re="\.\<${format_pkg}\>"
+       if ! [[ "$1" =~ ^.*${re} ]]; then
+           echo -e "${red}[Error!]${end} Package need finish .$format_pkg"
            exit 1
        elif [[ "$(echo "$1" | grep -o '-' | wc -l)" -gt '1' || "$(echo "$1" | grep -o '-' | wc -l)" -lt '1'  ]]; then
            echo -e "${red}[Error!]${end} Unexpected ' - ' Count."
@@ -260,7 +268,12 @@ case $1 in
            echo "Dont use symbols, space, tab etc.. in name of package."
            exit 1
        else
-             package="${1/%.mz/}" # Pegando nome do pacote
+            # Pegando somente nome do pacote
+            # sem extensão
+            package="${1/%.mz/}"
+            # lista temporaria para usar nas funções
+            # _LIST_ARCHIVES_DIRECTORIES e _CLEAN_LIST
+            temp_list="/tmp/${package}.temp"
        fi
          # Verificação de tudo está aonde deveria estar, como diretório
          # (info) e o arquivo de descrição (desc)
@@ -269,7 +282,11 @@ case $1 in
          # e limpeza no arquivo de listagem
          _LIST_ARCHIVES_DIRECTORIES || exit 1
          _CLEAN_LIST || exit 1
-         # Criando diretorio para armazenar listagem
+         # Se var/log/list existir apague, para criar um novo.
+         if [[ -d "$local_list" ]]; then
+             rm -r "$local_list" || { echo -e "${red}[ABORTED]${end} $local_list not removed."; exit 1 ;}
+         fi
+         # Criando novo diretorio para armazenar listagem
          [[ ! -d "$local_list" ]] && mkdir -p "$local_list"
          ( # Subshell
            cd "$local_list" || exit 1
@@ -286,9 +303,9 @@ case $1 in
            echo -e "${red}[Error!]${end} Unexpected ' - ' Count."
            echo "Use only two ' - ' In the name of your package."
            echo ""
-           echo -e "Perfect Format name is: ${blue}name-version-architeture.mz${end}"
+           echo -e "Perfect Format name is: ${blue}name-version.mz${end}"
            echo "If you need separate name of package prefer use ' _ '"
-           echo -e "Example: firefox_quantum${blue}-${end}54.8.9${blue}-${end}x86_64"
+           echo -e "Example: firefox_quantum${blue}-${end}54.8.9"
            echo ""
            echo "If you need more help, use -h or --help"
            exit 1

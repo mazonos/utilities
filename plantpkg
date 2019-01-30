@@ -1,0 +1,165 @@
+#!/usr/bin/env bash
+#=====================HEADER=========================================|
+#AUTOR
+# Jefferson 'slackjeff' Rocha <root@slackjeff.com.br>
+#
+#LICENCE
+# MIT
+#
+#PROGRAM
+# plantpkg - plant the package in your root.
+#
+#VERSION
+# 1.0
+#
+#CHANGELOG
+#====================================================================|
+
+#===============VARIAVEIS
+format_pkg='mz'   # Extensão do pacote
+#========Colors
+red='\033[31;1m'
+blue='\033[34;1m'
+cyan='\033[36;1m'
+pink='\033[35;1m'
+end='\033[m'
+
+#===============TESTES
+# Sem root não vai amiguinho.
+[[ "$UID" -ne '0' ]] && { echo "Root is required."; exit 1 ;}
+
+# Removendo diretorio info na raiz.
+# para deixar tudo limpo ;)
+[[ -e "/info/" ]] && rm -r "/info/"
+
+#==================FUNCOES
+
+# Função de pré instalação do pacote.
+# vamos arrumar tudo antes de seguir o processo.
+_PRE_INSTALL_PKG()
+{
+    descme='info/desc'
+
+    # Descompactando desc primeiro para exibir informações do pacote.
+    if ! tar xf "${pack}.${format_pkg}" -C "/tmp/" "./${descme}"; then
+        echo -e "${red}[ERROR!]${end} I could not unzip the file desc."
+        exit 1
+    else
+        # Carregando informações do pacote
+        if ! source "/tmp/${descme}"; then
+            echo -e "${red}[ERROR!]${end} Not load ${descme}, ABORT."
+            return 1
+        fi
+    fi
+    # Pegando tamanho da string
+    string_size=${#desc}
+    # Se string ultrapassar 44 caracteres, corte!
+    [[ "$string_size" -gt '50' ]] && desc="${desc:1:50}"
+    if [[ -e "/tmp/${descme}" ]]; then
+        echo -e "\n#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#"
+        echo -e "${pink}Package:${end}\t$pkgname"
+        echo -e "${pink}Version:${end}\t$version"
+        echo -e "${pink}Small Desc:${end}\t$desc"
+        echo -e "${pink}Maintainer:${end}\t$maintainer"
+        echo -e "#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#\n"
+        # Até aqui tudo bem! Podemos continuar com o processo de instalação.
+        _INSTALL_PKG || exit 1 # Chamando função
+        return
+    else
+        echo -e "${red}[ERROR!]${end} Could not load /tmp/${descme}."
+        echo "Archive not exist. ABORT!"
+        return 1
+    fi
+}
+
+_INSTALL_PKG()
+{
+    # Variavel puxando de source presente na função
+    # PRE_INSTALL_PKG. Está variavel é importante se caso
+    # o usuario passe um caminho completo do pacote exemplo:
+    # plantpkg -i /tmp/pacote.mz
+    info_pack="${pkgname}.${version}"
+
+    # Lista de mensagens para exibir em cada nova instalação
+    # de pacotes. Estas mensagens são exibidas aleatoriamente.
+    dialog_daddy=(
+        "Wait while Daddy works!"
+        "And here we go. Wait..."
+        "Dad is going to work, he's coming!"
+        "Daddy is tired but keeps working."
+        "Wait baby... I install your package, and then we dance."
+        "Did you want a daddy like me?"
+        "Daddy is written in Shell Script, OK? now i working..."
+        "If one day I become a manager of high level I retire, Wait i Install package."
+        "U need more packages on your system. Daddy takes care of this."
+        "I'm installing your package, please wait"
+        "This package is delicious. Dad will devour a pack."
+        "Arrest the goblins. I need to work... Wait, i install your package."
+        "Zombies are attacking the city. I'll hurry to install the package. Wait."
+        "Go eat popcorn. While I go here I strive to install the package for you."
+        "Feel the package at the root. Please wait, I am installing the package."
+        "Daddy likes UNIX-LIKE. Please wait I am installing the package."
+        "A meteor is falling! Please wait while I install your package."
+    )
+    # Pegando o número de frases da lista.
+    total_dialog_daddy=${#dialog_daddy[@]}
+    # Gerando frase randomica.
+    number=$(( $RANDOM % $total_dialog_daddy ))
+    # Qual será a frase?
+    msg_daddy="${dialog_daddy[$number]}"
+    echo -e "${blue}${msg_daddy}${end}\n"
+    if ! tar xf "${pack}.${format_pkg}" -C / 1>/dev/null 2>&1; then
+        return 1
+    fi
+    echo -e "${blue}[UNZIPPED]${end} OK..."
+    if [[ -e "/info/desc" ]]; then
+        ( # Subshell
+          cd "/info/"
+          if mv 'desc' "/var/log/desc/${info_pack}.desc"; then
+              echo -e "${blue}[MOVED]${end} desc to /var/log/desc/${info_pack}.desc"
+          else
+              echo -e "${red}[ERROR!]${end} could not move desc to /var/log/desc/${info_pack}.desc"
+              echo "ABORTING..."
+              return 1
+          fi
+        )
+    else
+        echo -e "${red}[ERROR!]${end} /info/desc does not exist. ABORT!"
+        return 1
+    fi
+    # Finalizando instalação.
+    [[ -e "/info/" ]] && rm -r "/info/"
+    echo -e "${blue}[INSTALLED]${end} Package ${info_pack}.${format_pkg} successfully installed."
+    return 0
+
+}
+
+#==================INICIO
+
+
+case $1 in
+    -i|--install)
+        shift # Rebaixe baby
+        while [[ -n "$1" ]]; do
+            # Variavel pack é importante para descompactar o pacote com o tar.
+            # De resto todas informações são puxadas das variaveis presentes no arquivo
+            # dentro do diretorio info (desc). Como por exemplo, nome e versão do pacote.
+            pack="$1"
+            re="\.\<${format_pkg}\>"
+            if ! [[ "$pack" =~ .*${re} ]]; then
+                echo -e "${red}[Error!]${end} Package need finish $format_pkg"
+                exit 1
+            elif [[ ! -e "$pack" ]]; then # Pacote existe?
+                echo -e "${red}[Error!]${end} Package ${pack} not found!"
+                exit 1
+            fi
+            # Pegando somente nome do pacote
+            # sem extensão.
+            pack="${1/%.mz/}"
+            # Vamos fazer a pre configuração antes de instalar o pacote.
+            # Se tudo estiver certo o pacote será instalado!
+            _PRE_INSTALL_PKG
+            shift
+       done
+    ;;
+esac

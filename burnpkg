@@ -26,6 +26,7 @@
 
 #===================VARIAVEIS
 dirlist='/var/log/list'
+#========Colors
 red='\033[31;1m'
 blue='\033[34;1m'
 end='\033[m'
