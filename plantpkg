@@ -171,7 +171,10 @@ _PKG_EXIST()
                   else
                       echo -e "${blue}[Upgraded!]\t${end} ${pink}${info_pack}${end} already Upgraded in the system."
                       return 0
-                  fi            
+                  fi
+              else
+                  echo -e "${blue}[NOT FOUND!]${end} The package: ${info_pack} not installed."
+                  return 1          
               fi
           done
     fi
@@ -273,7 +276,7 @@ case $1 in
         while [[ -n "$1" ]]; do           
             _PRE_CONF "$@" || exit 1 # Função de configuração de entrada!
             # Verificando se o pacote existe no sistema.
-            _PKG_EXIST "$@"
+            _PKG_EXIST "$@" || exit 1
             shift
         done
     ;;
