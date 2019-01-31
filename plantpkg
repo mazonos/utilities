@@ -16,7 +16,8 @@
 #====================================================================|
 
 #===============VARIAVEIS
-format_pkg='mz'   # Extensão do pacote
+export format_pkg='mz'   # Extensão do pacote
+export descme='info/desc'
 #========Colors
 red='\033[31;1m'
 blue='\033[34;1m'
@@ -34,14 +35,54 @@ end='\033[m'
 
 #==================FUNCOES
 
+_HELP_pt()
+{
+    cat << 'EOF'
+plantpkg - Ferramenta de instalação de pacotes .mz
+
+OPÇÕES:
+    -i, install
+       Instalação de pacote(s)
+
+    -u, upgrade
+       Upgrade do(s) pacote(s)
+
+    -h, --help
+       Exibe essa ajuda e sai
+
+COMO USAR?
+
+       
+EOF
+}
+
+
+_PRE_CONF()
+{
+    # Variavel pack é importante para descompactar o pacote com o tar.
+    # De resto todas informações são puxadas das variaveis presentes no arquivo
+    # dentro do diretorio info (desc). Como por exemplo, nome e versão do pacote.
+    pack="$1"
+
+    re="\.\<${format_pkg}\>"
+    if ! [[ "$pack" =~ .*${re} ]]; then
+        echo -e "${red}[Error!]${end} Package need finish $format_pkg"
+        return 1
+    elif [[ ! -e "$pack" ]]; then # Pacote existe?
+        return 1
+    fi
+    # Pegando somente nome do pacote
+    # sem extensão.
+    pack="${1/%.mz/}"
+    return 0
+}
+
 # Função de pré instalação do pacote.
 # vamos arrumar tudo antes de seguir o processo.
 _PRE_INSTALL_PKG()
-{
-    descme='info/desc'
-
+{    
     # Descompactando desc primeiro para exibir informações do pacote.
-    if ! tar xf "${pack}.${format_pkg}" -C "/tmp/" "./${descme}"; then
+    if ! tar xmf "${pack}.${format_pkg}" -C "/tmp/" "./${descme}"; then
         echo -e "${red}[ERROR!]${end} I could not unzip the file desc."
         exit 1
     else
@@ -62,9 +103,13 @@ _PRE_INSTALL_PKG()
         echo -e "${pink}Small Desc:${end}\t$desc"
         echo -e "${pink}Maintainer:${end}\t$maintainer"
         echo -e "#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#\n"
-        # Até aqui tudo bem! Podemos continuar com o processo de instalação.
-        _INSTALL_PKG || exit 1 # Chamando função
-        return
+        # Variavel puxando de source...
+        # Está variavel é importante se caso
+        # o usuario passe um caminho completo do pacote exemplo:
+        # plantpkg -i /tmp/packages/pacote-versao.mz ou
+        # plantpkg -i /tmp/*.mz
+        info_pack="${pkgname}-${version}"
+        return 0 # Até aqui tudo bem! Podemos continuar com o processo de instalação.
     else
         echo -e "${red}[ERROR!]${end} Could not load /tmp/${descme}."
         echo "Archive not exist. ABORT!"
@@ -72,14 +117,85 @@ _PRE_INSTALL_PKG()
     fi
 }
 
+# Verificando se pacote ja existe.
+_PKG_EXIST()
+{
+    local unpack_temporary='/tmp'
+    local dir_desc='/var/log/desc'
+
+    # Descompactando temporariamente diretorio *info/* para
+    # pegar o arquivo *desc* do pacote.
+    if tar xmf "${pack}.${format_pkg}" -C "$unpack_temporary" "./${descme}"; then
+        if [[ -e "${unpack_temporary}/${descme}" ]]; then
+            if ! source ${unpack_temporary}/${descme}; then
+                echo -e "${red}[Error!]${end} Could not find file ${blue}${unpack_temporary}/${desc_me}${end}"
+                echo -e "This Archive is important for program verification. Aborting."
+                exit 1
+            else
+                # Nome + versão do pacote que o usuario deu entrada.
+                # Esta variavel vai servir para fazer comparação com a
+                # Descrição temporária.
+                info_pack="${pkgname}-${version}"
+            fi
+        fi
+    fi
+    # Verificando se o pacote ja existe... Se bater exatamente
+    # com a descrição é sinal que ele não precisa atualizar ;)
+    if [[ -e "${dir_desc}/${info_pack}.desc" ]]; then
+        echo -e "${blue}[Upgraded!]${end} ${info_pack} already Upgraded in the system."
+        echo "No need update;)"
+        return 0 # Voltamos para tocar a diante.
+    else
+        # Vamos precisar pegar na versão do programa original
+        # somente os números.
+        version_origi_numbers="$(echo "$version" | sed 's/\.desc//; s/\.//g; s/-//;s/^0//')"
+          dir_desc='/var/log/desc'      # Variavel para o cd
+          re="\b${pkgname}\b"
+          pushd "$dir_desc" &>/dev/null # Entrando no diretório
+          for i in *; do
+              if [[ "$i" =~ ^${re}-.* ]]; then # Padrão bateu?
+                  # Pegando somente a versão, tirando ponto, -, e se iniciar com 0
+                  # tirar tbm para fazer a operação.
+                  version_temp_numbers="$(echo "$i" | cut -d '-' -f 2 | sed 's/\.desc//; s/\.//g; s/-//;s/^0//')"
+                  if [[ "$version_origi_numbers" -gt "$version_temp_numbers" ]]; then
+                      b="${i/%.desc}" # Cortando final da string.
+                      echo -e "Package Installed version:\t${blue}${b}${end}"
+                      echo -e "Package you are installing:\t${blue}${pkgname}.${version}${end}"
+                      echo -e "\n${blue}[UPDATE]${end} Let's start updating! Wait.\n"
+                      #cd - &>/dev/null # Retornando ao diretório anterior
+                      popd # Retornando ao diretório aonde estava.
+                      burnpkg -b "${pkgname}" # Removendo o pacote
+                      _PRE_CONF "$1"
+                     _PRE_INSTALL_PKG || exit 1
+                     _INSTALL_PKG || exit 1
+                  else
+                      echo -e "${blue}[Upgraded!]\t${end} ${pink}${info_pack}${end} already Upgraded in the system."
+                      return 0
+                  fi            
+              fi
+          done
+    fi
+
+
+
+#        ( # Subshell para não sujar o ambiente.
+#          if ! source "${dir_desc}/${pkgname}.${version}.desc"; then
+#              echo -e "${red}[ERROR!]${end} Not load ${unpack_temporary}/${descme}, ABORT."
+#              return 1
+#          else
+              # Pegando nome de descrição do pacote temporário,
+              # para fazer comparação com o pacote (desc) que o usuario
+              # deu de entrada. 
+#              info_pack_comparation="${pkgname}.${version}"
+#          fi
+          # Vamos fazer comparação agora dos pacotes.
+#          [[ "" ]]
+#        )
+#    fi
+}
+
 _INSTALL_PKG()
 {
-    # Variavel puxando de source presente na função
-    # PRE_INSTALL_PKG. Está variavel é importante se caso
-    # o usuario passe um caminho completo do pacote exemplo:
-    # plantpkg -i /tmp/pacote.mz
-    info_pack="${pkgname}.${version}"
-
     # Lista de mensagens para exibir em cada nova instalação
     # de pacotes. Estas mensagens são exibidas aleatoriamente.
     dialog_daddy=(
@@ -108,7 +224,7 @@ _INSTALL_PKG()
     # Qual será a frase?
     msg_daddy="${dialog_daddy[$number]}"
     echo -e "${blue}${msg_daddy}${end}\n"
-    if ! tar xf "${pack}.${format_pkg}" -C / 1>/dev/null 2>&1; then
+    if ! tar xmf "${pack}.${format_pkg}" -C / 1>/dev/null 2>&1; then
         return 1
     fi
     echo -e "${blue}[UNZIPPED]${end} OK..."
@@ -129,7 +245,7 @@ _INSTALL_PKG()
     fi
     # Finalizando instalação.
     [[ -e "/info/" ]] && rm -r "/info/"
-    echo -e "${blue}[INSTALLED]${end} Package ${info_pack}.${format_pkg} successfully installed."
+    echo -e "${blue}[INSTALLED]${end} Package ${info_pack}-${format_pkg} successfully installed."
     return 0
 
 }
@@ -138,28 +254,29 @@ _INSTALL_PKG()
 
 
 case $1 in
-    -i|--install)
+    install|-i) # Instalação de pacotes
         shift # Rebaixe baby
+        [[ -z "$1" ]] && _HELP
         while [[ -n "$1" ]]; do
-            # Variavel pack é importante para descompactar o pacote com o tar.
-            # De resto todas informações são puxadas das variaveis presentes no arquivo
-            # dentro do diretorio info (desc). Como por exemplo, nome e versão do pacote.
-            pack="$1"
-            re="\.\<${format_pkg}\>"
-            if ! [[ "$pack" =~ .*${re} ]]; then
-                echo -e "${red}[Error!]${end} Package need finish $format_pkg"
-                exit 1
-            elif [[ ! -e "$pack" ]]; then # Pacote existe?
-                echo -e "${red}[Error!]${end} Package ${pack} not found!"
-                exit 1
-            fi
-            # Pegando somente nome do pacote
-            # sem extensão.
-            pack="${1/%.mz/}"
+            _PRE_CONF "$@" || exit 1 # Função de configuração de entrada!
             # Vamos fazer a pre configuração antes de instalar o pacote.
             # Se tudo estiver certo o pacote será instalado!
-            _PRE_INSTALL_PKG
+            _PRE_INSTALL_PKG || exit 1
+            _INSTALL_PKG || exit 1
             shift
        done
     ;;
+
+    -u|upgrade) # Upgrade de pacotes
+        [[ -z "$1" ]] && _HELP
+        shift
+        while [[ -n "$1" ]]; do           
+            _PRE_CONF "$@" || exit 1 # Função de configuração de entrada!
+            # Verificando se o pacote existe no sistema.
+            _PKG_EXIST "$@"
+            shift
+        done
+    ;;
+
+    *) _HELP_pt; exit 0 ;;
 esac

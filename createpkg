@@ -24,6 +24,7 @@
 #===============VARIAVEIS
 format_pkg='mz'            # Extensão do pacote
 local_list="var/log/list/"  # Localização da lista
+bug='/var/log/createpkg-bug.log'
 #========Colors
 red='\033[31;1m'
 blue='\033[34;1m'
@@ -52,62 +53,102 @@ done
 #===============FUNCOES
 _HELP_pt()
 {
-    cat <<EOF | less
-createpkg - Simples ferramenta para empacotamento
+    cat << 'EOF'
+createpkg - Ferramenta para empacotamento .mz
 
 OPÇÕES:
+    -n, --name
+       NomeDoPacote-Versão.mz
 
--n, --name
-  NomeDoPacote-Versão.mz
+    -g, --generate-desc
+       Gera o arquivo desc não preenchido.
 
--c, --create-list
-  NomeDoPacote-Versão
-
--h, --help
-  Exibe essa ajuda e sai
+    -h, --help
+       Exibe essa ajuda e sai
 
 COMO USAR?
 
-  Para usar o createpkg é NECESSÁRIO após você fazer o fakeroot
-  do programa que você compilou entrar dentro do mesmo. Após isso
-  você pode executar com o parâmetro -n ou --name e o nome do pacote.
-  Um Exemplo básico! Supondo que você acabou de compilar e fez um fakeroot em
-  /tmp/build/firefox_quantum54.0, olhando dentro do diretório todos diretórios
-  subdiretórios e arquivos estão presentes no mesmo.
- 
-  Após fazer a manipulação, inserindo e talvez retirando coisas, chegou a hora
-  de rodar o createpkg para criar um simples pacote! Execute como root:
+       Para usar o createpkg é NECESSÁRIO após você fazer o fakeroot
+       do programa que você compilou entrar dentro do mesmo. Após isso
+       você pode executar com o parâmetro -n ou --name e o nome do pacote.
+       Com está opção você irá gerar um pacote .mz! Mas antes disso você necessita
+       fazer algumas modificações no seu futuro pacote!
 
-  # createpkg -n "firefox_quantum-54.0.mz"
+       O DIRETÓRIO *info* E O ARQUIVO *desc*
+
+       É de extrema importância você criar um DIRETÓRIO chamado *info* dentro do
+       diretório atual onde está todos seus arquivos do programa que você recém compilo.
+       Dentro deste diretório *info* voce necessita criar o arquivo *desc*, este arquivo
+       levará configurações importantes do pacote.
+       INFORMAÇÕES do ARQUIVO desc:
+
+       # Nome do Mantenedor
+       maintainer=''
+
+       # Nome do pacote
+       pkgname=''
+
+       # Pequena descrição do Programa
+       desc=''
+
+       # Versão do Programa
+       version=''
+
+       # URL do Programa
+       url=''
   
-  Serão gerados dois arquivos um diretório acima que são eles:
-  "firefox_quantum-54.0.mz" e "firefox_quantum-54.0.sha256"
+       Preencha todos os campos em letras minusculas, os campos *pkgname* e *version* 
+       precisam estar exatamente igual ao que você vai passar na hora da criação do 
+       pacote, supondo que preenchi na variável *pkgname* google_chrome e na variável
+       *version* 57.6.8.0, na hora de gerar o pacote eu precisarei usar as mesmas
+       informações:
+
+       # createpkg -n "google_chrome-57.6.8.0.mz"
+
+       Caso as informações sejam diferentes o createpkg irá avisar sobre o que não
+       está correto.
+
+    NOTA!
+    +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+       Para gerar um arquivo layout do *desc* você poderá usar a opção
+       -g, --generate-desc que está presente no createpkg. 
+    +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+       Após fazer a manipulação, inserindo e talvez retirando coisas, chegou a hora
+       de rodar o createpkg para criar um simples pacote! Execute como root:
+
+       # createpkg -n "firefox_quantum-54.0.mz"
   
-  NOTA!
-  O nome do pacote não deve exceder mais de 2 traços ( - ), eles são os divisores
-  do nome do pacote para a versão do pacote e da versão do pacote para arquitetura
-  e somente isto!
-  Se caso vocẽ necessitar separar o nome do pacote como google chrome, não use - prefira
-  usar o ( _ ), exemplo:
+       Serão gerados dois arquivos um diretório acima que são eles:
+       "firefox_quantum-54.0.mz" e "firefox_quantum-54.0.sha256"
+  
+    NOTA!
+    +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+       O nome do pacote não deve exceder mais de 1 traço ( - ), ele é o divisor
+       do nome do pacote para a versão do pacote.
+       Se caso vocẽ necessitar separar o nome do pacote como google-chrome, não
+       use traço - prefira usar o ( _ ) UNDERLINE, exemplo de criação do pacote
+       'google chrome':
 
-  createpkg -n "google_chrome-64.5.9.2.mz"
+       # createpkg -n "google_chrome-64.5.9.2.mz"
+    +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-LISTAS
+PACOTE
 
-  No processo de empacotamento é gerado uma lista de todos arquivos contidos no diretório
-  do programa que você está empacotando. Está lista é armazenada dentro do pacote em:
-  var/log/list/Programa-versao.list
- 
-  Está lista é de extrema importância para remover o programa e seus arquivos com o
-  utilitário burnpkg. E também desta maneira você tem um controle do que está em seu sistema
+       O pacote que é gerado é um simples arquivo tar comprimido com o formato
+       xz, intitulamos de formato *mz* ou *.mz*. Você pode descompactar o arquivo
+       com o utilitário tar, porém o pacote ficará bagunçado na raiz do sistema e
+       você terá que tratar na mão. Por isso não recomendamos essa ação. Para fazer
+       a instalação recomendamos que você utilize o utilitário  *plantpkg* o mesmo faz
+       uma instalação bem limpa e trata todo o arquivo antes de realmente instalar.
 
 AUTOR
 
-  Jefferson 'Slackjeff' Rocha <root@slackjeff.com.br>
+    Jefferson 'Slackjeff' Rocha <root AT slackjeff DOT com DOT br>
 
 LICENÇA
 
-  MIT
+    MIT
 EOF
 }
 
@@ -121,13 +162,13 @@ _VERIFY_ON()
     
     if [[ ! -d "$dir_info" ]]; then # Diretório info existe?
         echo -e "${red}[ERROR!]${end} ${pink}${dir_info}${end} directory\n"
-        echo -e "It's necessary your package have the directory ${pink}info${end}."
+        echo -e "It's necessary your package have the DIRECTORY ${pink}info${end}."
         echo -e "${pink}${dir_info}${end} its a directory store important archives."
         echo "For more information use -h, --help."
         exit 1
     elif [[ ! -e "${dir_info}/${info_desc}" ]]; then
         echo -e "${red}[ERROR!]${end} ${pink}${info_desc}${end} archive\n"
-        echo -e "It's necessary your package have the archive ${pink}desc${end} inside of directory '${dir_info}'."
+        echo -e "It's necessary your package have the ARCHIVE ${pink}desc${end} inside of directory '${dir_info}'."
         echo -e "${pink}${info_desc}${end} have informations of your package."
         echo "For more information use -h, --help."
         exit 1
@@ -136,34 +177,34 @@ _VERIFY_ON()
     # Se alguma variavel estiver nula não podemos continuar.
         source ${dir_info}/${info_desc} # Carregando arquivo.
         if [[ -z "$maintainer" ]]; then
-            echo -e "Check ${pink}${info_desc}${end}, variable ${blue}maintainer${end} null"
+            echo -e "Check ${pink}${info_desc}${end}, VARIABLE ${blue}maintainer${end} null"
             echo "Enter the name of the package maintainer into variable maintainer."
             exit 1
         elif [[ -z "$pkgname" ]]; then
-            echo -e "Check ${pink}${info_desc}${end}, variable ${blue}pkgname${end} null"
+            echo -e "Check ${pink}${info_desc}${end}, VARIABLE ${blue}pkgname${end} null"
             echo "Enter the name of the package into variable pkgname."
             exit 1
         elif [[ -z "$desc" ]]; then
-            echo -e "Check ${pink}${info_desc}${end}, variable ${blue}desc${end} null"
+            echo -e "Check ${pink}${info_desc}${end}, VARIABLE ${blue}desc${end} null"
             echo "Detail a small description into variable desc."
             exit 1
         elif [[ -z "$version" ]]; then
-            echo -e "Check ${pink}${info_desc}${end}, variable ${blue}version${end} null"
+            echo -e "Check ${pink}${info_desc}${end}, VARIABLE ${blue}version${end} null"
             echo "Enter a version of software into variable version."
             exit 1
         elif [[ -z "$url" ]]; then
-            echo -e "Check ${pink}${info_desc}${end}, variable ${blue}url${end} null"
+            echo -e "Check ${pink}${info_desc}${end}, VARIABLE ${blue}url${end} null"
             echo "Enter a url of project/software into variable url."
             exit 1
         fi
         # Conferindo se o nome do pacote e versão batem com o que
         # o usuario passou em linha, se não bater não devemos continuar.
         if [[ "$pkgname" != "$(echo "$package" | cut -d '-' -f '1')" ]]; then
-            echo -e "Check ${pink}${info_desc}${end}, variable ${blue}pkgname${end} it different"
+            echo -e "Check ${pink}${info_desc}${end}, VARIABLE ${blue}pkgname${end} it different"
             echo "of the name you entered as an argument. Check and return ;)"
             exit 1
         elif [[ "$version" != $(echo "$package" | cut -d '-' -f '2' | sed 's/\.mz//') ]]; then
-            echo -e "Check ${pink}${info_desc}${end}, variable ${blue}version${end} it different"
+            echo -e "Check ${pink}${info_desc}${end}, VARIABLE ${blue}version${end} it different"
             echo "of the version you entered as an argument. Check and return ;)"
             exit 1
         else
@@ -226,16 +267,19 @@ _CLEAN_LIST()
 _CREATE_PKG()
 {
     echo -e "${blue}[Create]${end} Now, create package for You! Wait..."
-    if tar cvJf ../${package}.${format_pkg} .; then
+    if tar cvJf ../${package}.${format_pkg} . ; then
         echo -e "${blue}[Create]${end} Your Package on: ../${package}.${format_pkg}"
         ( # Subshell
-          cd ..
+          cd .. # Voltando 1 diretório acima ;)
           if sha256sum ${package}.${format_pkg} > ${package}.${format_pkg}.sha256; then
-              echo -e "${blue}[Create]${end} Your MD5 on: ../${package}.${format_pkg}.sha256"
+              echo -e "${blue}[Create]${end} Your sha256 on: ../${package}.${format_pkg}.sha256"
+          else
+              echo -e "${red}[Warning!]${end} No create ../${package}.${format_pkg}.sha256"
           fi
         )
     else
-        echo -e "${red}[Error!]${end} No created ../${package}.${format_pkg}"
+        echo -e "${red}[Error!]${end} No created package ../${package}.${format_pkg}"
+        echo "This error is fatal, so the program will not proceed."
         exit 1
     fi
 }
@@ -252,20 +296,23 @@ case $1 in
            exit 1
        elif [[ "$(echo "$1" | grep -o '-' | wc -l)" -gt '1' || "$(echo "$1" | grep -o '-' | wc -l)" -lt '1'  ]]; then
            echo -e "${red}[Error!]${end} Unexpected ' - ' Count."
-           echo "Use only two ' - ' In the name of your package."
+           echo -e "USE ONLY ONE ' ${red}-${end} ' In the name of your package."
            echo ""
-           echo -e "Perfect Format name is: ${blue}name-version.mz${end}"
-           echo "If you need separate name of package prefer use ' _ '"
-           echo -e "Example: firefox_quantum${blue}-${end}54.8.9.mz"
+           echo -e "EXAMPLE the perfect format: ${blue}leafpad${end}-${blue}2.6.8${end}.${blue}mz${end}"
            echo ""
-           echo "If you need more help, use -h or --help"
+           echo -e "If you need separate name of package prefer use ' ${red}_${end} '"
+           echo -e "EXAMPLE: firefox_quantum${blue}-${end}54.8.9.mz"
+           echo ""
+           echo "If you need more HELP, use -h or --help"
            exit 1
        # Se nome do pacote ter números ou espaços não deve continuar
        elif [[ "$1" =~ .*([[:digit:]]+|[[:space:]]+).*-.* ]]; then
            echo -e "${red}[Error!]${end} Unexpected character."
            echo ""
            echo -e "Perfect Format name is: ${blue}name-version.mz${end}"
-           echo "Dont use symbols, space, tab etc.. in name of package."
+           echo "${red}DONT USE${end} symbols, space, tab etc.. in name of package."
+           echo ""
+           echo "If you need more HELP, use -h or --help"
            exit 1
        else
             # Pegando somente nome do pacote
@@ -297,28 +344,6 @@ case $1 in
          _CREATE_PKG || exit 1
     ;;
 
-    -c|--create-list)
-       shift # Rebaixando
-       if [[ "$(echo "$1" | grep -o '-' | wc -l)" -gt '1' || "$(echo "$1" | grep -o '-' | wc -l)" -lt '1'  ]]; then
-           echo -e "${red}[Error!]${end} Unexpected ' - ' Count."
-           echo "Use only two ' - ' In the name of your package."
-           echo ""
-           echo -e "Perfect Format name is: ${blue}name-version.mz${end}"
-           echo "If you need separate name of package prefer use ' _ '"
-           echo -e "Example: firefox_quantum${blue}-${end}54.8.9"
-           echo ""
-           echo "If you need more help, use -h or --help"
-           exit 1
-       elif [[ -z "$1" ]]; then
-           echo -e "Name of list? Example: firefox_quantum${blue}-${end}54.8.9"
-           exit 1
-       else
-           _LIST_ARCHIVES_DIRECTORIES || exit 1 # Chamada função
-           _CLEAN_LIST || exit 1                # Chamada função
-           mv -v "$temp_list" ${1}.list
-       fi
-    ;;
-
     -h|--help) _HELP_pt; exit 0 ;;
-    *) echo "-h, --help"; exit 1 ;;
+    *)         _HELP_pt; exit 0 ;;
 esac
