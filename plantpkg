@@ -179,8 +179,6 @@ _PKG_EXIST()
           done
     fi
 
-
-
 #        ( # Subshell para não sujar o ambiente.
 #          if ! source "${dir_desc}/${pkgname}.${version}.desc"; then
 #              echo -e "${red}[ERROR!]${end} Not load ${unpack_temporary}/${descme}, ABORT."
@@ -195,6 +193,31 @@ _PKG_EXIST()
 #          [[ "" ]]
 #        )
 #    fi
+}
+
+# Função para gerenciar alguns arquivos do pacote
+_MANAGE_ARCHIVES()
+{
+    echo -e "${blue}[UNZIPPED]${end} OK..."
+    if [[ -e "/info/desc" ]]; then
+        ( # Subshell
+          cd "/info/"
+          if mv 'desc' "/var/log/desc/${info_pack}.desc"; then
+              echo -e "${blue}[MOVED]${end} desc to /var/log/desc/${info_pack}.desc"
+          else
+              echo -e "${red}[ERROR!]${end} could not move desc to /var/log/desc/${info_pack}.desc"
+              echo "ABORTING..."
+              return 1
+          fi
+        )
+    else
+        echo -e "${red}[ERROR!]${end} /info/desc does not exist. ABORT!"
+        return 1
+    fi
+    # Finalizando instalação.
+    [[ -e "/info/" ]] && rm -r "/info/"
+    echo -e "${blue}[INSTALLED]${end} Package ${info_pack}-${format_pkg} successfully installed."
+    return 0
 }
 
 _INSTALL_PKG()
@@ -227,30 +250,27 @@ _INSTALL_PKG()
     # Qual será a frase?
     msg_daddy="${dialog_daddy[$number]}"
     echo -e "${blue}${msg_daddy}${end}\n"
-    if ! tar xmf "${pack}.${format_pkg}" -C / 1>/dev/null 2>&1; then
-        return 1
-    fi
-    echo -e "${blue}[UNZIPPED]${end} OK..."
-    if [[ -e "/info/desc" ]]; then
-        ( # Subshell
-          cd "/info/"
-          if mv 'desc' "/var/log/desc/${info_pack}.desc"; then
-              echo -e "${blue}[MOVED]${end} desc to /var/log/desc/${info_pack}.desc"
-          else
-              echo -e "${red}[ERROR!]${end} could not move desc to /var/log/desc/${info_pack}.desc"
-              echo "ABORTING..."
-              return 1
-          fi
-        )
+    # Vamos verificar se existe o script de pre instalação *pre.sh*
+    # Se ele existir o programa deve executalo.
+    if tar tf "${pack}.${format_pkg}" ./info/pre.sh &>/dev/null; then
+        tmp_pack="/tmp/${pack}"
+        echo -e "${blue}[Pre-Installation]${end} The script pre.sh was found. Execute now!"
+        mkdir "$tmp_pack" # Criando arquivo temporário para descompactar pacote
+        if ! tar xmf "${pack}.${format_pkg}" -C $tmp_pack 1>/dev/null 2>&1; then
+            return 1
+        fi
+        pushd "$tmp_pack" >/dev/null
+        bash "info/pre.sh" # Executando script pre.sh
+        cp -rf * / # Enviando todos arquivos para a /
+        _MANAGE_ARCHIVES && { popd >/dev/null; rm -r "${tmp_pack}";return 0 ;} || { popd >/dev/null; rm -r "${tmp_pack}"; return 1 ;}
     else
-        echo -e "${red}[ERROR!]${end} /info/desc does not exist. ABORT!"
-        return 1
+        # Caiu aqui pode continuar normal.
+        if ! tar xmf "${pack}.${format_pkg}" -C / 1>/dev/null 2>&1; then
+            return 1
+        else
+            _MANAGE_ARCHIVES && return 0 || return 1
+        fi  
     fi
-    # Finalizando instalação.
-    [[ -e "/info/" ]] && rm -r "/info/"
-    echo -e "${blue}[INSTALLED]${end} Package ${info_pack}-${format_pkg} successfully installed."
-    return 0
-
 }
 
 #==================INICIO
