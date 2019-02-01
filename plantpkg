@@ -178,24 +178,10 @@ _PKG_EXIST()
               fi
           done
     fi
-
-#        ( # Subshell para não sujar o ambiente.
-#          if ! source "${dir_desc}/${pkgname}.${version}.desc"; then
-#              echo -e "${red}[ERROR!]${end} Not load ${unpack_temporary}/${descme}, ABORT."
-#              return 1
-#          else
-              # Pegando nome de descrição do pacote temporário,
-              # para fazer comparação com o pacote (desc) que o usuario
-              # deu de entrada. 
-#              info_pack_comparation="${pkgname}.${version}"
-#          fi
-          # Vamos fazer comparação agora dos pacotes.
-#          [[ "" ]]
-#        )
-#    fi
 }
 
 # Função para gerenciar alguns arquivos do pacote
+# como *desc*, e script de pós instalação *pos.sh*
 _MANAGE_ARCHIVES()
 {
     echo -e "${blue}[UNZIPPED]${end} OK..."
@@ -216,7 +202,7 @@ _MANAGE_ARCHIVES()
     fi
     [[ -e "info/pos.sh" ]] && { echo -e "${blue}[Post-installation]${end} The script pos.sh was found. Execute now!"; bash "info/pos.sh" ;}
     # Finalizando instalação.
-    [[ -e "/info/" ]] && rm -r "/info/"
+    [[ -d "/info/" ]] && rm -r "/info/" # Apagando diretório /info/ na raiz.
     echo -e "${blue}[INSTALLED]${end} Package ${info_pack}-${format_pkg} successfully installed."
     return 0
 }
@@ -254,7 +240,7 @@ _INSTALL_PKG()
     # Vamos verificar se existe o script de pre instalação *pre.sh*
     # Se ele existir o programa deve executalo.
     if tar tf "${pack}.${format_pkg}" ./info/pre.sh &>/dev/null; then
-        tmp_pack="/tmp/${pack}"
+        tmp_pack="/tmp/${pack}" # Var para criação de diretório temporário
         echo -e "${blue}[Pre-Installation]${end} The script pre.sh was found. Execute now!"
         mkdir "$tmp_pack" # Criando arquivo temporário para descompactar pacote
         if ! tar xmf "${pack}.${format_pkg}" -C $tmp_pack 1>/dev/null 2>&1; then

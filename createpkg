@@ -213,7 +213,7 @@ _VERIFY_ON()
             exit 1
         else
             echo -e "${blue}[CHECK VARIABLES]${end} OK."
-            return
+            return 0
         fi
     fi # if principal
 }
@@ -292,8 +292,7 @@ _CREATE_PKG()
 # info não existir ele cria!
 _GENERATE_DESC()
 {
-
-    [[ ! -d "info" ]] && mkdir info
+    [[ ! -d "info" ]] && mkdir info # diretorio info não existe? crie.
     cat > info/desc << 'EOF'
 ######################################################################
 # This file is the heart of the package, it is necessary to do
@@ -383,6 +382,8 @@ case $1 in
          )
          # Iniciando processo de criação do pacote
          _CREATE_PKG || exit 1
+         # Apagando arquivo(s) temporário(s)
+         rm "$temp_list"
     ;;
 
     -g|generate)
