@@ -10,7 +10,7 @@
 # name-version-architeture.mz
 #
 #VERSION
-# 1.2
+# 1.3
 #
 #CHANGELOG
 # (VERSÃO 1.1) - Jefferson Rocha
@@ -342,7 +342,7 @@ case $1 in
            echo ""
            echo "If you need more HELP, use -h or --help"
            exit 1
-       # Se nome do pacote ter números ou espaços não deve continuar
+       # Se nome do pacote ter traços, virgula, ponto, interrogação e outros ou espaços não deve continuar
        elif [[ "$1" =~ .*([[:punct:]]+|[[:space:]]+).*-.* ]]; then
            echo -e "${red}[Error!]${end} Unexpected character."
            echo ""
@@ -358,7 +358,6 @@ case $1 in
             # lista temporaria para usar nas funções
             # _LIST_ARCHIVES_DIRECTORIES e _CLEAN_LIST
             temp_list="/tmp/${package}.temp"
-exit
        fi
          # Verificação de tudo está aonde deveria estar, como diretório
          # (info) e o arquivo de descrição (desc)
