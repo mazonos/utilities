@@ -343,11 +343,11 @@ case $1 in
            echo "If you need more HELP, use -h or --help"
            exit 1
        # Se nome do pacote ter números ou espaços não deve continuar
-       elif [[ "$1" =~ .*([[:digit:]]+|[[:space:]]+).*-.* ]]; then
+       elif [[ "$1" =~ .*([[:punct:]]+|[[:space:]]+).*-.* ]]; then
            echo -e "${red}[Error!]${end} Unexpected character."
            echo ""
            echo -e "Perfect Format name is: ${blue}name-version.mz${end}"
-           echo "${red}DONT USE${end} symbols, space, tab etc.. in name of package."
+           echo -e "${red}DONT USE${end} symbols, space, tab etc.. in name of package."
            echo ""
            echo "If you need more HELP, use -h or --help"
            exit 1
@@ -358,6 +358,7 @@ case $1 in
             # lista temporaria para usar nas funções
             # _LIST_ARCHIVES_DIRECTORIES e _CLEAN_LIST
             temp_list="/tmp/${package}.temp"
+exit
        fi
          # Verificação de tudo está aonde deveria estar, como diretório
          # (info) e o arquivo de descrição (desc)
