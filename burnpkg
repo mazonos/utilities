@@ -26,6 +26,7 @@
 
 #===================VARIAVEIS
 dirlist='/var/log/list'
+dirdesc='/var/log/desc'
 #========Colors
 red='\033[31;1m'
 blue='\033[34;1m'
@@ -82,38 +83,50 @@ EOF
 # Função para listagem de lista
 _PKG_CONF()
 {
-    cd "$dirlist"
+    count_occurrences=0
+    pushd "$dirdesc" 1>/dev/null
+    re="\b${pack}\b"
     for search_pack in *; do
-        if [[ "$search_pack" =~ ^${pack}-[0-9]+.*\.list ]]; then
-            echo -e "${blue}[Found]${end} $search_pack"
-            list="$search_pack" # Pegando para jogar no _BURN
-            _BURN # Chamada função para remoção.
-            return
-        else
-            # Vamos fazer uma conferencia se existi algum pacote
-            # que tem o nome no formato que o usuario pediu.
-            count='0'
-            for temp_pack in *; do
-                # Se existir ao menos 1 pacote com o nome, a contadora
-                # é incrementada
-                [[ "$temp_pack" =~ ^${pack}.* ]] && { count=$(( $count + 1 )) ;}
+        if [[ "$search_pack" =~ ^${re}.* ]]; then # Pacote existe?
+            for q in *; do # Checando quantas ocorrencias existem.
+                if [[ "$q" =~ ^${re}.* ]]; then
+                    # Se existir varios pacotes com o mesmo nome incremente!
+                    count_occurrences="$(( $count_occurrences + 1 ))"
+                fi
             done
-            if [[ "$count" -gt '0' ]]; then # Se for maior tem pacotes com este nome
-                echo -e "${red}[ALTERNATIVES]${end} Following packages with this name were found\n"
-                ls ${pack}* | cut -d '-' -f 1-2
-                return
-            else
-                echo -e "${red}[NOT FOUND]${end} ${pack}"
-                return
-            fi
+            # Carregando descrição do pacote para testes!
+            # se caso o pacote tem mais de uma versão no sistema.
+            ( # Subshell para não sujar ambiente com o source
+             source ${search_pack}
+             local name_version="${pkgname}-${version}" # Variavel para vericação nome + versão
+             if [[ "${name_version}.desc" =~ ^${re}.desc ]] || [[ "${name_version}.desc" =~ ^${re}.* && "$count_occurrences" -eq '1' ]] ; then
+                 echo -e "############################## ${red}REMOVE${end} ##############################"
+                 echo -e "PACKAGE: ${blue}${pkgname}${end}"
+                 echo -e "VERSION: ${blue}${version}${end}"
+                 echo -e "####################################################################\n"
+                 pushd "${dirlist}" 1>/dev/null # Entrando no diretório das listas /var/log/list/
+                 search_pack="${search_pack/%.desc/.list}" # se terminar com .desc substitua por .list
+                 # Chamada função para remoção.
+                 [[ -e "${search_pack}" ]] && _BURN && { popd 1>/dev/null; return 0 ;} || { popd 1>/dev/null; return 1 ;}
+             else
+                 # Caiu aqui? Então existe mais de um pacote com o mesmo nome
+                 # porém com versões diferente...
+                 # O programa não pode fazer nada, apenas alertar.
+                 search_pack="${search_pack/%.desc/}"
+                 echo -e "${red}[FOUND]${end} $search_pack"
+             fi
+
+            #return
+        ) # fim de Subshell
         fi
     done
 }
 
+# Função para remoção dos arquivos e diretórios do pacote
 _BURN()
 {
    ( # Subshell
-    cd "/" # Entrando na raiz
+    cd "/" 1>/dev/null # Entrando na raiz
     #AC = Arquivo
     #ED = Diretorio Vazio
 
@@ -128,10 +141,10 @@ _BURN()
                 a="$(($a + 1))"
                 echo -e "${red}Burned AC${end}\t${archive}"   
                 archive="$(echo "$archive" | sed 's|/|\\/|g')"
-                #sed -i "/\b${archive}\b/d" "${dirlist}/${list}"
+                #sed -i "/\b${archive}\b/d" "${dirdesc}/${list}"
             fi
         fi
-    done < "${dirlist}/${list}" # Recebendo de _PKG_CONF
+    done < "${dirlist}/${search_pack}" # Recebendo de _PKG_CONF
 
     # Tirando todo conteudo da var para ser reaproveitada
     unset archive
@@ -144,11 +157,11 @@ _BURN()
                    d="$(( $d + 1 ))"
                    echo -e "${blue}Burned ED${end}\t${archive}"   
                    archive="$(echo "$archive" | sed 's|/|\\/|g')"
-                   #sed -i "/\b${archive}\b/d" "${dirlist}/${list}"
+                   #sed -i "/\b${archive}\b/d" "${dirdesc}/${list}"
                 fi 
             fi
         fi
-    done < "${dirlist}/${list}" # Recebendo de _PKG_CONF
+    done < "${dirlist}/${search_pack}" # Recebendo de _PKG_CONF
 
     # Impressão na tela
     if [[ "$a" -gt '0' ]] || [[ "$d" -gt '0' ]]; then
