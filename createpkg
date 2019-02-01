@@ -96,6 +96,10 @@ COMO USAR?
 
        # URL do Programa
        url=''
+
+       # Dependências do pacote, campo não é obrigatório, mas é interessante
+       # Você fazer a adição para futuras consultas.
+       dep=("")
   
        Preencha todos os campos em letras minusculas, os campos *pkgname* e *version* 
        precisam estar exatamente igual ao que você vai passar na hora da criação do 
@@ -342,8 +346,8 @@ case $1 in
            echo ""
            echo "If you need more HELP, use -h or --help"
            exit 1
-       # Se nome do pacote ter traços, virgula, ponto, interrogação e outros ou espaços não deve continuar
-       elif [[ "$1" =~ .*([[:punct:]]+|[[:space:]]+).*-.* ]]; then
+       # Se nome do pacote ter espaços não deve continuar
+       elif [[ "$1" =~ .*[[:space:]]+.*-.* ]]; then
            echo -e "${red}[Error!]${end} Unexpected character."
            echo ""
            echo -e "Perfect Format name is: ${blue}name-version.mz${end}"
