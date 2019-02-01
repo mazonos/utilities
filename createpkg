@@ -60,7 +60,7 @@ OPÇÕES:
     -n, --name
        NomeDoPacote-Versão.mz
 
-    -g, --generate-desc
+    -g, generate
        Gera o arquivo desc não preenchido.
 
     -h, --help
@@ -111,7 +111,7 @@ COMO USAR?
     NOTA!
     +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
        Para gerar um arquivo layout do *desc* você poderá usar a opção
-       -g, --generate-desc que está presente no createpkg. 
+       -g, generate que está presente no createpkg. 
     +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
        Após fazer a manipulação, inserindo e talvez retirando coisas, chegou a hora
@@ -284,9 +284,46 @@ _CREATE_PKG()
     fi
 }
 
+# Gera o arquivo desc de base, também se o diretório
+# info não existir ele cria!
+_GENERATE_DESC()
+{
+
+    [[ ! -d "info" ]] && mkdir info
+    cat > info/desc << 'EOF'
+######################################################################
+# This file is the heart of the package, it is necessary to do
+# conferences, so it is important you add the information correctly.
+# All variables are required! The array of dependencies *dep* does
+# not, but it's interesting you add for future reference.
+######################################################################
+
+# Package Maintainer Name
+maintainer=""
+
+# Package Name
+pkgname=""
+
+# SMALL Description of Software, Do not use a long description.
+desc=""
+
+# Software Version
+version=""
+
+# URL SOFTWARE
+url=""
+
+# What packages do your package need to run?
+# This array is optional.
+dep=("")
+EOF
+    echo -e "${pink}[DESC]${end} Created successfully inside of directory ${blue}info${end}"
+    exit 0
+}
+
 #==================INICIO
 case $1 in
-    -n|--name)
+    -n|name)
        shift # Rebaixando
        # Se nome do pacote não for letras ou se tiver
        # espaços entre outras coisas, não pode continuar.
@@ -342,6 +379,10 @@ case $1 in
          )
          # Iniciando processo de criação do pacote
          _CREATE_PKG || exit 1
+    ;;
+
+    -g|generate)
+        _GENERATE_DESC || exit 1
     ;;
 
     -h|--help) _HELP_pt; exit 0 ;;

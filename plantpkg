@@ -214,6 +214,7 @@ _MANAGE_ARCHIVES()
         echo -e "${red}[ERROR!]${end} /info/desc does not exist. ABORT!"
         return 1
     fi
+    [[ -e "info/pos.sh" ]] && { echo -e "${blue}[Post-installation]${end} The script pos.sh was found. Execute now!"; bash "info/pos.sh" ;}
     # Finalizando instalação.
     [[ -e "/info/" ]] && rm -r "/info/"
     echo -e "${blue}[INSTALLED]${end} Package ${info_pack}-${format_pkg} successfully installed."
@@ -260,7 +261,7 @@ _INSTALL_PKG()
             return 1
         fi
         pushd "$tmp_pack" >/dev/null
-        bash "info/pre.sh" # Executando script pre.sh
+        bash "info/pre.sh" # Executando script de pré-instalação pre.sh
         cp -rf * / # Enviando todos arquivos para a /
         _MANAGE_ARCHIVES && { popd >/dev/null; rm -r "${tmp_pack}";return 0 ;} || { popd >/dev/null; rm -r "${tmp_pack}"; return 1 ;}
     else
