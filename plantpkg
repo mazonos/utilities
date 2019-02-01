@@ -265,7 +265,7 @@ _INSTALL_PKG()
         _MANAGE_ARCHIVES && { popd >/dev/null; rm -r "${tmp_pack}";return 0 ;} || { popd >/dev/null; rm -r "${tmp_pack}"; return 1 ;}
     else
         # Caiu aqui pode continuar normal.
-        if ! tar xmf "${pack}.${format_pkg}" -C / 1>/dev/null 2>&1; then
+        if ! tar xmf "${pack}.${format_pkg}" -C / 1>/dev/null; then
             return 1
         else
             _MANAGE_ARCHIVES && return 0 || return 1
