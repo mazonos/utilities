@@ -1,5 +1,5 @@
 # utilities
-Aqui você encontra todos os scripts criados especialmente para a mazonOS
+Aqui você encontra todos os scripts utilitários criados especialmente para a mazonOS
 
 ## Licença
 MIT
@@ -24,15 +24,3 @@ MIT
 * Wmaker
 * Blackbox
 * Flubox
-
------
-
-### burnpkg (Remover pacote)
-
------
-
-### createpkg (Criar Pacote)
-
------
-
-### plantpkg (Instalar Pacote)
