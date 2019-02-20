@@ -33,8 +33,11 @@ ok=0
 falso=1
 dir_install="/mnt/mazon"
 tarball_min="mazon_minimal-0.2.tar.xz"
+sha256_min="mazon_minimal-0.2.sha256sum"
 tarball_full="mazon_beta-1.2.tar.xz"
+sha256_full="mazon_beta-1.2.sha256sum"
 tarball_default=$tarball_full
+sh256_default=$sha256_full
 url_mazon="http://mazonos.com/releases/"
 pwd=$PWD
 cfstab=$dir_install"/etc/fstab"
@@ -232,9 +235,9 @@ function sh_wgetdefault(){
 	case $nchoice in
 		$D_OK)
 			#wget -c $URL;;
-			wget -c "$URL" 2>&1 | \
+			wget -c $URL 2>&1 | \
 		    	stdbuf -o0 awk '/[.] +[0-9][0-9]?[0-9]?%/ { print substr($0,63,3) }' | \
-        		dialog --title "Please wait, Downloading..." --backtitle "$ccabec" --gauge $URL 7 70
+        		dialog --title "$plswait" --backtitle "$ccabec" --gauge $URL 7 70
 			;;
 		$D_CANCEL)
 			info $cmsg017
@@ -275,6 +278,21 @@ function sh_check_install(){
 	if [ $LMOUNT -eq 0 ]; then
 		sh_mountpartition
 	fi
+
+	confmulti "INSTALL" "\nDir Montagem : $dir_install" "\n    Partição : $part" "\n\nTudo pronto para iniciar a 
+instalação. Confirma?"
+	local nOk=$?
+	case $nOk in
+		$D_ESC)
+			info $cancelinst
+			menuinstall
+			;;
+		$D_CANCEL)
+			info $cancelinst
+			menuinstall
+			;;
+	esac
+
 	sh_exectar
 	grubinstall
 }
@@ -698,6 +716,8 @@ pt_BR(){
 	cdlok2="\n[ok] Download concluído com sucesso."
 	cdlok3="\n[ok] $tarball_default encontrado."
 	cdlok4="\n\nIniciar a instalação agora?"
+    plswait="Por favor aguarde, baixando...""
+	cfinish='Instalação completa! Boas vibes.\nReboot para iniciar com MazonOS Linux. \n\nEnviar bugs root@mazonos.com'"
 }
 
 en_US(){
@@ -735,6 +755,8 @@ en_US(){
 	cdlok2="\n[ok] Download completed successfully."
 	cdlok3="\n[ok] $tarball_default found."
 	cdlok4="\n\nStart the installation now?"
+    plswait="Please wait, Downloading...""
+	cfinish='Install Complete! Good vibes. \nReboot to start with MazonOS Linux. \n\nSend bugs - root@mazonos.com'"
 }
 
 function scrend(){
