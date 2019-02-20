@@ -198,11 +198,13 @@ grubinstall(){
 	    chroot . /bin/bash -c "grub-install ${part/[0-9]/}"
 		chroot . /bin/bash -c "grub-mkconfig -o /boot/grub/grub.cfg"
 	    scrfstab
+		sr_umountpartition
 	    alerta "*** GRUB *** " "ok! grub successfully installed"
 		finish
 	else
+		sr_umountpartition
 		alerta ' *** GRUB ERROR ***' 'ops, error install grub. please check bugs'
-      	exit
+      	menuinstall
 	fi
 }
 
@@ -485,6 +487,14 @@ choosedisk(){
 	#if [ $sd <> 0 ]; then
 	#cfdisk $sd
 	#fi
+}
+
+function sh_umountpartition(){
+	mensagem "Aguarde, Desmontando particao de trabalho."
+	umount -rl $part 2> /dev/null
+	$LMOUNT=0
+	cd $pwd
+	#menuinstall
 }
 
 function sh_mountpartition(){
