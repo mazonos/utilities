@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 ################################################################
-#       install dialog Mazon OS - version 0.0.1       			#
+#       install dialog Mazon OS - version 1.0       			#
 #                                                     			#
 #      @utor: Diego Sarzi 		<diegosarzi@gmail.com>			#
 #             Vilmar Catafesta 	<vcatafesta@gmail.com>			#
@@ -44,23 +44,23 @@ cstr=$(cat << _EOF
 Wiki
 There are two ways to install, with the install-mazon.sh (dep dialog) script or the manual form as follows:
 
-Pre Requirements: 
-- Download MazonOS
-- An existing Linux distribution or a linux livecd. 
+Pre Requirements:
+- Download MazonOS Linux
+- An existing Linux distribution or a linux livecd.
 - Create root partition using cfdisk or gparted (ext4) and DOS table / - min 20GB
 
-Format partition: 
+Format partition:
 # mkfs.ext4 /dev/sdx(x)
-Mount partition in /mnt:
+Mount partition in /mnt
 # mount /dev/sdx(x) /mnt
 
-Unzip the mazonos file in / mnt:
+Unzip the mazonos file in /mnt:
 # tar -xJpvf /xxx/xxx/mazonos.tar.xz -C /mnt
 
 Go to /mnt directory:
 # cd /mnt
 
-Mount proc / dev / sys and chroot to /mnt:
+Mount proc/ dev/ sys and chroot to /mnt:
 # mount --type proc /proc proc/
 # mount --rbind /dev dev/
 # mount --rbind /sys sys/
@@ -172,21 +172,25 @@ quit(){
 	[ $? -ne 0 ] && { clear ; exit ;}
 }
 
-
-
-tarfull(){
+function sh_exectar(){
+  	cd $dir_install
 	which pv
-	if [ $? = 1 ]; then
-    	tar xJpvf $mazon -C /mnt
+	if [ $? = 127 ]; then   # no which?
+	    tar xJpvf $pwd/$tarball_default -C $dir_install
+	elif [ $? = 1 ]; then
+	    tar xJpvf $pwd/$tarball_default -C $dir_install
 	else
-		(pv -n $mazon | tar xJpvf - -C /mnt ) \
-       		2>&1 | dialog --backtitle "$ccabec" --gauge "Extracting files..." 6 50
+		(pv -n $pwd/$tarball_default | \
+		tar xJpvf - -C $dir_install ) 2>&1 | \
+		dialog 	--backtitle "$ccabec" --gauge "Extracting files..." \
+		6 50
 	fi
 }
 
 grubinstall(){
-	grubyes=$(conf ' *** GRUB *** ' 'Would you like to install grub?\n\n*Remembering that we do not yet have dual boot support in our grub.\nIf use dualboot, use the grub from its other distribution with:\n# update-grub')
-	if [ $grubyes = 'yes' ]; then
+	conf ' *** GRUB *** ' 'Would you like to install grub?\n\n*Remembering that we do not yet have dual boot support in our grub.\nIf use dualboot, use the grub from its other distribution with:\n# update-grub'
+	grubyes=$?
+	if [ $grubyes = 0 ]; then
 		cd $dir_install
 	   	mount --type proc /proc proc/
 		mount --rbind /sys sys/
@@ -218,7 +222,7 @@ finish(){
 	exit
 }
 
-dlwgetdefault(){
+function sh_wgetdefault(){
 	local URL=$url_mazon$tarball_default
 	conf "cdlok1" "$cmsgversion"
 
@@ -244,16 +248,19 @@ dlwgetdefault(){
 		confmulti "$cdlok1" "$cdlok2" "$cdlok3" "$cdlok4"
 		local ninit=$?
 		case $ninit in
-			$D_OK)scrinstallmin;;
+			$D_OK)
+				sh_check_install
+				;;
 
 			$D_CANCEL)
 				info $cancelinst
-				menuinstall;;
+				menuinstall
+				;;
 		esac
 	fi
 }
 
-scrinstallmin(){
+function sh_check_install(){
 	if [ $LDISK -eq 0 ]; then
 		choosedisk
 	fi
@@ -261,38 +268,13 @@ scrinstallmin(){
 		choosepartition
 	fi
 	if [ $LFORMAT -eq 0 ]; then
-		scrformat
+		sh_format
 	fi
 	if [ $LMOUNT -eq 0 ]; then
-		mountpartition
+		sh_mountpartition
 	fi
-  		cd $dir_install
-      	tar -xJpvf $pwd/$tarball_min -C $dir_install
-		grubinstall
-}
-
-scrinstallminold(){
-	conf "*** INSTALL " "The minimal version does not come from Xorg and IDE.\nDo you confirm?"
-	local nchoice=$?
-	case $nchoice in
-		$D_OK)
-			if [ $LDISK -eq 0 ]; then
-				choosedisk
-			fi
-			if [ $LPARTITION -eq 0 ]; then
-				choosepartition
-			fi
-			if [ $LFORMAT -eq 0 ]; then
-				scrformat
-			fi
-			if [ $LMOUNT -eq 0 ]; then
-				mountpartition
-			fi
-    		cd $dir_install
-        	tar -xJpvf $pwd/$tarball_min -C $dir_install
-			grubinstall
-			;;
-	esac
+	sh_exectar
+	grubinstall
 }
 
 function menuinstall(){
@@ -345,24 +327,31 @@ function menuinstall(){
 			case "$resfull" in
 				# TROCAR POR /MNT *********************
 			XFCE4)
-				dlwgetdefault
-            	tarfull
-				echo "ck-launch-session dbus-launch --exit-with-session startxfce4" > /mnt/etc/skel/.xinitrc
+				tarball_default=$tarball_full
+				cmsgversion=$cmsg016
+				sh_wgetdefault
+				echo "ck-launch-session dbus-launch --exit-with-session startxfce4" > $dir_install/mnt/etc/skel/.xinitrc
 				break
 				;;
 
 			i3WM)
-				downloadwget "https://sourceforge.net/projects/mazonos/files/latest/download"
-               	tarfull
-				echo "ck-launch-session dbus-launch --exit-with-session i3" > /mnt/etc/skel/.xinitrc
-				break ;;
-			esac ;;
+				tarball_default=$tarball_full
+				cmsgversion=$cmsg016
+				sh_wgetdefault
+				echo "ck-launch-session dbus-launch --exit-with-session i3" > $dir_install/etc/skel/.xinitrc
+				break
+				;;
+			esac
+			;;
 
 		minimal)
 			tarball_default=$tarball_min
 			cmsgversion=$cmsg015
-			dlwgetdefault
-			scrinstallmin
+			sh_wgetdefault
+			#sh_check_install
+			#sh_mountpartiton
+			#sh_exectar
+			#grubinstall;
 			;;
 
 		custom)
@@ -405,7 +394,7 @@ function menuinstall(){
 				fi
 			done
            	;;
-			quit)
+		quit)
 			scrend 0
 			;;
 		esac
@@ -413,9 +402,9 @@ function menuinstall(){
 
 	# grub install
 	#######################
-   	grubinstall
-	finish
-	clear
+   	#grubinstall
+	#finish
+	#clear
 }
 
 sh_checkdisk(){
@@ -458,11 +447,9 @@ choosedisk(){
 			scrmain
 			;;
 	esac
+
 	if [ $sd <> 0 ]; then
 		sh_checkdisk
-
-
-
  		typefmt=$(dialog \
 	    	--stdout 													\
 	    	--title     	"$cmsg009" 									\
@@ -500,14 +487,32 @@ choosedisk(){
 	#fi
 }
 
-mountpartition(){
-	# Partition mount
-	#################
-	alert $part
+function sh_mountpartition(){
 	mensagem "Aguarde, criando diretorio de trabalho."
 	mkdir -p $dir_install
 	mensagem "Aguarde, Montando particao de trabalho."
-	mount $part $dir_install
+
+	while true
+	do
+		mount $part $dir_install 2> /dev/null
+		if [ $? = 32 ]; then # monta?
+			conf "** MOUNT **" "Particao já montada. Tentar?"
+            if [ $? = 0 ]; then
+				loop
+			fi
+           	$LMOUNT=0
+			break
+		fi
+		if [ $? = 1 ]; then # fail?
+			conf "** MOUNT **" "Falha de montagem da partição. Tentar?"
+            if [ $? = 0 ]; then
+				loop
+			fi
+           	$LMOUNT=0
+			break
+		fi
+		break
+	done
 	$LMOUNT=1
 	mensagem "Aguarde, Entrando no diretorio de trabalho."
 	cd $dir_install
@@ -544,11 +549,11 @@ choosepartition(){
 			;;
 	esac
 	$LPARTITION=1
-	scrformat
-	#mountpartition
+	#sh_format
+	#sh_mountpartition
 }
 
-scrformat(){
+function sh_format(){
 	# deseja formatar?
 	$LFORMAT=0
 	format=
@@ -594,11 +599,11 @@ dlmenu(){
 		    case $dl in
 				1)	tarball_default=$tarball_full
 					cmsgversion=$cmsg016
-					dlwgetdefault
+					sh_wgetdefault
 					;;
 				2) 	tarball_default=$tarball_min
 					cmsgversion=$cmsg015
-					dlwgetdefault
+					sh_wgetdefault
 					;;
 				3) 	clear; exit;;
 			esac
@@ -622,9 +627,8 @@ scrmain(){
 		        1 "$cmsg005"  												\
 		        2 "$cmsg006"						  						\
 		        3 "$cmsg007"												\
-			   	4 "$menustep"		   					     				\
-			   	5 "Install"	   					     						\
-			   	6 "$cmsg008"						     					)
+			   	4 "Install"	   					     						\
+			   	5 "$cmsg008"						     					)
 
 				exit_status=$?
 				case $exit_status in
@@ -642,9 +646,8 @@ scrmain(){
 					1) menuinstall;;
 					2) choosedisk;;
 					3) choosepartition;;
-					4) choosedisk; choosepartition; menuinstall;;
-					5) menuinstall;;
-					6) scrend 0;;
+					4) menuinstall;;
+					5) scrend 0;;
 				esac
 	done
 }
@@ -654,7 +657,7 @@ pt_BR(){
 	ccabec="MazonOS Linux installer v1.0"
 	buttonback="Voltar"
 	cmsg000="Sair"
-	cmsg001="*** MazonOS INSTALL v1.0 ***"
+	cmsg001="MazonOS Linux INSTALL v1.0"
 	cmsg002="MazonOS Linux"
 	cmsg003="Bem-vindo ao instalador do MazonOS"
 	cmsg004="Escolha uma opção:"
@@ -692,7 +695,7 @@ en_US(){
 	ccabec="MazonOS Linux installer v1.0"
 	buttonback="Back"
 	cmsg000="Exit"
-	cmsg001="*** MazonOS INSTALL v1.0 ***"
+	cmsg001="MazonOS Linux INSTALL v1.0"
 	cmsg002="MazonOS Linux"
 	cmsg003="Welcome to the MazonOS installer"
 	cmsg004="Choose an option:"
@@ -774,7 +777,7 @@ choosetypeuser(){
 	done
 }
 
-init(){
+function init(){
 	while true; do
 		i18=$(dialog													\
 			--clear														\
@@ -821,4 +824,3 @@ init(){
 # Init - configuracao inicial
 clear
 init
-
