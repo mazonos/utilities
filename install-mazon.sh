@@ -149,6 +149,17 @@ conf(){
 			return $?
 }
 
+confmulti(){
+    dialog							\
+			--title 	"$1" 		\
+			--backtitle	"$ccabec"	\
+			--yes-label "$yeslabel"	\
+			--no-label  "$nolabel"	\
+			--yesno 	"$*" 		\
+			10 100
+			return $?
+}
+
 inkey(){
     dialog							\
 			--title 	"$2" 		\
@@ -209,7 +220,7 @@ finish(){
 
 dlwgetdefault(){
 	local URL=$url_mazon$tarball_default
-	conf ' *** DOWNLOAD *** ' "$cmsgversion"
+	conf "cdlok1" "$cmsgversion"
 
 	local nchoice=$?
 	case $nchoice in
@@ -221,7 +232,7 @@ dlwgetdefault(){
 			;;
 		$D_CANCEL)
 			info $cmsg017
-			exit;;
+			menuinstall;;
 	esac
 
 	mazon=$(ls | grep $tarball_default)
@@ -230,20 +241,24 @@ dlwgetdefault(){
 	   	fmazon=$( dialog --stdout --fselect './' 6 40 )
 		quit
 	else
-		conf "*** DOWNLOAD *** " "[ok] Download completed successfully.\n[ok] $mazon found.\n\nStart the installation now?"
+		confmulti "$cdlok1" "$cdlok2" "$cdlok3" "$cdlok4"
 		local ninit=$?
 		case $ninit in
 			$D_OK)scrinstallmin;;
+
+			$D_CANCEL)
+				info $cancelinst
+				menuinstall;;
 		esac
 	fi
 }
 
 scrinstallmin(){
-	conf "*** INSTALL " "The minimal version does not come from Xorg and IDE.\nDo you confirm?"
-	local nchoice=$?
-	case $nchoice in
-		$D_OK)
-			info "$LDISK"
+	#conf "*** INSTALL " "The minimal version does not come from Xorg and IDE.\nDo you confirm?"
+	#local nchoice=$?
+	#case $nchoice in
+	#	$D_OK)
+			#info "$LDISK"
 			if [ $LDISK -eq 0 ]; then
 				info "choosedisk"
 				choosedisk
@@ -260,12 +275,11 @@ scrinstallmin(){
     		cd $dir_install
         	tar -xJpvf $pwd/$tarball_min -C $dir_install
 			grubinstall
-			break
-			;;
-	esac
+	#		;;
+	#esac
 }
 
-scrinstall(){
+menuinstall(){
 	while true
 	do
     	resposta=$( dialog --stdout                         			\
@@ -277,9 +291,15 @@ scrinstall(){
            	custom     'Choose softwares. (GIMP, QT5, LIBREOFFICE...)'	\
            	quit       'Exit install'									)
 
-		 # sair com cancelar ou esc
-		clear
-		quit
+			exit_status=$?
+			case $exit_status in
+				$ESC)
+					scrmain
+					;;
+				$CANCEL)
+					scrmain
+					;;
+			esac
 
 		case "$resposta" in
 			full)	resfull=$(dialog --stdout                   \
@@ -350,7 +370,7 @@ scrinstall(){
                         	done
                         	;;
 			quit)
-				exit
+				scrend 0
 				;;
 		esac
 	done
@@ -455,7 +475,7 @@ mountpartition(){
 	$LMOUNT=1
 	mensagem "Aguarde, Entrando no diretorio de trabalho."
 	cd $dir_install
-	#scrinstall
+	#menuinstall
 }
 
 choosepartition(){
@@ -566,9 +586,9 @@ scrmain(){
 		        1 "$cmsg005"  												\
 		        2 "$cmsg006"						  						\
 		        3 "$cmsg007"												\
-			   	4 "$cmsg008"						     					\
-			   	5 "$menustep"		   					     				\
-			   	6 "Install"	   					     						)
+			   	4 "$menustep"		   					     				\
+			   	5 "Install"	   					     						\
+			   	6 "$cmsg008"						     					)
 
 				exit_status=$?
 				case $exit_status in
@@ -583,17 +603,18 @@ scrmain(){
 						;;
 				esac
 		        case $main in
-					1) dlmenu;;
+					1) menuinstall;;
 					2) choosedisk;;
 					3) choosepartition;;
-					4) scrend 0;;
-					5) choosedisk; choosepartition; dlmenu;;
-					6) scrinstall;;
+					4) choosedisk; choosepartition; dlmenu;;
+					5) menuinstall;;
+					6) scrend 0;;
 				esac
 	done
 }
 
 pt_BR(){
+	lang="pt_BR"
 	ccabec="MazonOS Linux installer v1.0"
 	buttonback="Voltar"
 	cmsg000="Sair"
@@ -611,9 +632,10 @@ pt_BR(){
 	cmsg012="Experiente"
 	cmsg013="Particionamento automatico (sfdisk)"
 	cmsg014="Tem certeza?"
-	cmsg015='Voce gostaria de baixar o MazonOS minimal?'
-	cmsg016='Voce gostaria de baixar o MazonOS full?'
+	cmsg015='A versão mínima não inclui o Xorg e DE.\nVocê gostaria de baixar o MazonOS minimal?'
+	cmsg016='Você gostaria de baixar o MazonOS full?'
 	cmsg017='Download cancelado!'
+	cancelinst="Instalacao cancelada!"
 	cmsgversion=$cmsg015
 	cmsg018="Baixar pacote full (X)"
 	cmsg019="Baixar pacote minimal"
@@ -623,9 +645,14 @@ pt_BR(){
 	menustep="Passo a passo"
 	yeslabel="Sim"
 	nolabel="Não"
+	cdlok1="*** DOWNLOAD *** "
+	cdlok2="\n[ok] Download concluído com sucesso."
+	cdlok3="\n[ok] $tarball_default encontrado."
+	cdlok4="\n\nIniciar a instalação agora?"
 }
 
 en_US(){
+	lang="en_US"
 	ccabec="MazonOS Linux installer v1.0"
 	buttonback="Back"
 	cmsg000="Exit"
@@ -643,10 +670,11 @@ en_US(){
 	cmsg012="Expert"
 	cmsg013="Automatic partitioning (sfdisk)"
 	cmsg014="Are you sure?"
-	cmsg015='Would you like to download MazonOS minimal?'
+	cmsg015='The minimum version does not include Xorg and DE. \nWould you like to download MazonOS minimal?'
 	cmsg016='Would you like to download MazonOS full?'
 	cmsgversion=$cmsg015
 	cmsg017='Download canceled!'
+	cancelinst="Installation canceled!"
 	cmsg018="Download full package (X)"
 	cmsg020="** NOTICE ** Will data will be lost!"
 	cmsg021="Format partition"
@@ -654,10 +682,14 @@ en_US(){
 	menustep="Step by step"
 	yeslabel="Yes"
 	nolabel="No"
+	cdlok1="*** DOWNLOAD ***"
+	cdlok2="\n[ok] Download completed successfully."
+	cdlok3="\n[ok] $tarball_default found."
+	cdlok4="\n\nStart the installation now?"
 }
 
-scrend(){
-	info "By"
+function scrend(){
+	#info "By"
 	clear
 	exit $1
 }
