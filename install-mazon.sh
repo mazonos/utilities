@@ -136,21 +136,32 @@ info(){
 			--title 	"$cmsg002"	\
 			--backtitle	"$ccabec"	\
 			--msgbox 	"$*" 		\
-			5 40
+			10 60
 }
-
 conf(){
-    dialog	--clear					\
+    dialog							\
 			--title 	"$1" 		\
-    		--no-collapse 			\
 			--backtitle	"$ccabec"	\
+			--yes-label "$yeslabel"	\
+			--no-label  "$nolabel"	\
 			--yesno 	"$2" 		\
 			10 100
+			return $?
+}
+
+inkey(){
+    dialog							\
+			--title 	"$2" 		\
+			--backtitle	"$ccabec"	\
+			--pause 	"$2" 		\
+			0 0 "$1"
 }
 
 quit(){
 	[ $? -ne 0 ] && { clear ; exit ;}
 }
+
+
 
 tarfull(){
 	which pv
@@ -352,14 +363,21 @@ scrinstall(){
 }
 
 sh_checkdisk(){
-	#dsk=($(df | grep ^$sd | awk '{print $1 $2, $3}'))
-	dsk=($(df | grep $sd | cut -c 1-}))
-	#dsk=($(df -h | grep ^$sd))
-	#dsk=($(df -h | grep $sd))
-	conf "** AVISO **" "\nO disco selecionado contém partições montadas.\n\n$dsk\n\nDesmontar?"
-	display_result "** AVISO **" "\nO disco selecionado contém partições montadas.\n\nDesmontar?" $dsk
-}
+	dsk=$(df -h | grep "/dev/sdb" | awk '{print $1, $2, $3, $4, $5, $6, $7}')
+	#dsk=$(df | grep $sd | cut -c 1-})
+	#dsk=$(df -h | grep ^$sd)
+	#dsk=$(df -h | grep "$sd")
 
+	if [ "$dsk" <> " " ]; then
+		conf "** AVISO **" "\nO disco selecionado contém partições montadas.\n\n$dsk\n\nDesmontar?"
+		local nchoice=$?
+		if [ $nchoice = 0 ]; then
+			for i in $(seq 1 10); do
+				umount -rl $sd$i 2> /dev/null
+			done
+		fi
+	fi
+}
 
 choosedisk(){
 	# escolha o disco a ser particionado // Choose disk to be parted
@@ -603,6 +621,8 @@ pt_BR(){
 	cmsg021="Formatar partição"
 	menuquit="Sair"
 	menustep="Passo a passo"
+	yeslabel="Sim"
+	nolabel="Não"
 }
 
 en_US(){
@@ -632,6 +652,8 @@ en_US(){
 	cmsg021="Format partition"
 	menuquit="Quit"
 	menustep="Step by step"
+	yeslabel="Yes"
+	nolabel="No"
 }
 
 scrend(){
