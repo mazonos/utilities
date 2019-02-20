@@ -254,13 +254,29 @@ dlwgetdefault(){
 }
 
 scrinstallmin(){
-	#conf "*** INSTALL " "The minimal version does not come from Xorg and IDE.\nDo you confirm?"
-	#local nchoice=$?
-	#case $nchoice in
-	#	$D_OK)
-			#info "$LDISK"
+	if [ $LDISK -eq 0 ]; then
+		choosedisk
+	fi
+	if [ $LPARTITION -eq 0 ]; then
+		choosepartition
+	fi
+	if [ $LFORMAT -eq 0 ]; then
+		scrformat
+	fi
+	if [ $LMOUNT -eq 0 ]; then
+		mountpartition
+	fi
+  		cd $dir_install
+      	tar -xJpvf $pwd/$tarball_min -C $dir_install
+		grubinstall
+}
+
+scrinstallminold(){
+	conf "*** INSTALL " "The minimal version does not come from Xorg and IDE.\nDo you confirm?"
+	local nchoice=$?
+	case $nchoice in
+		$D_OK)
 			if [ $LDISK -eq 0 ]; then
-				info "choosedisk"
 				choosedisk
 			fi
 			if [ $LPARTITION -eq 0 ]; then
@@ -275,103 +291,123 @@ scrinstallmin(){
     		cd $dir_install
         	tar -xJpvf $pwd/$tarball_min -C $dir_install
 			grubinstall
-	#		;;
-	#esac
+			;;
+	esac
 }
 
-menuinstall(){
+function menuinstall(){
 	while true
 	do
-    	resposta=$( dialog --stdout                         			\
-        	--title 	' *** INSTALL CONFIGURATION *** '  				\
-           	--menu 		'Choose your option:'              				\
-           	0 70 0                                       				\
-	   		full       '*8.2G Free disk (Xfce4 or i3wm)' 				\
-           	minimal    'Minimall install, not X.'        				\
-           	custom     'Choose softwares. (GIMP, QT5, LIBREOFFICE...)'	\
-           	quit       'Exit install'									)
+    	resposta=$( dialog												\
+		--stdout														\
+        --title 		' *** INSTALL CONFIGURATION *** '				\
+		--backtitle 	"$ccabec"										\
+		--cancel-label	"$buttonback"									\
+		--menu			'Choose your option:'							\
+		0 70 0															\
+	   	full			'*8.2G Free disk (Xfce4 or i3wm)'				\
+		minimal			'Minimall install, not X.'						\
+		quit			'Exit install'									)
+#		custom			'Choose softwares. (GIMP, QT5, LIBREOFFICE...)'
+
+		exit_status=$?
+		case $exit_status in
+			$ESC)
+				scrmain
+				;;
+			$CANCEL)
+				scrmain
+				;;
+		esac
+
+		case "$resposta" in
+		full)
+			resfull=$(dialog									\
+			--stdout											\
+			--backtitle 	"$ccabec"							\
+			--cancel-label	"$buttonback"						\
+			--title			'FULL INSTALATION'					\
+			--menu			'Choose your Desktop Enviroment:'	\
+			0 0 0                               		    	\
+			XFCE4	'Classic and powerfull!'					\
+			i3WM	'Desktop for advanceds guys B).'			)
 
 			exit_status=$?
 			case $exit_status in
 				$ESC)
-					scrmain
+					loop
 					;;
 				$CANCEL)
-					scrmain
+					loop
 					;;
 			esac
 
-		case "$resposta" in
-			full)	resfull=$(dialog --stdout                   \
-					--title 'FULL INSTALATION'  	            \
-					--menu 'Choose your Desktop Enviroment:' 	\
-                        0 0 0                                   \
-                        XFCE4 'Classic and powerfull!' 			\
-                        i3WM  'Desktop for advanceds guys B).'	)
-
-						case "$resfull" in
-                        	# TROCAR POR /MNT *********************
-                            XFCE4) 	dlwgetdefault
-	             					tarfull
-                                    echo "ck-launch-session dbus-launch --exit-with-session startxfce4" > /mnt/etc/skel/.xinitrc
-									break
-									;;
-
-							i3WM) 	downloadwget "https://sourceforge.net/projects/mazonos/files/latest/download"
-                            		tarfull
-                                    echo "ck-launch-session dbus-launch --exit-with-session i3" > /mnt/etc/skel/.xinitrc
-									break ;;
-                        esac ;;
-
-			minimal)
-				tarball_default=$tarball_min
-				cmsgversion=$cmsg015
+			case "$resfull" in
+				# TROCAR POR /MNT *********************
+			XFCE4)
 				dlwgetdefault
-				scrinstallmin
+            	tarfull
+				echo "ck-launch-session dbus-launch --exit-with-session startxfce4" > /mnt/etc/skel/.xinitrc
+				break
 				;;
 
-			custom) 	rescustom=$(dialog --stdout                 			\
-                        	--separate-output                       			\
-                        	--checklist 'Choose install softwares:' 			\
-                        	0 0 0                                   			\
-							LIBREOFFICE  'Office suite free' OFF    			\
-                        	GIMP 		 'GNU Image Manipulation Program' OFF  	\
-                        	INKSCAPE 	 'Draw freely' OFF                     	\
-                        	QT5 		 'Framework' OFF 						\
-                        	SUBLIME_TEXT 'Text editor for code' OFF 			\
-                        	VLC 		 'Player video' OFF 					\
-                        	OPENJDK 	 'Open Java' OFF 						\
-                        	TELEGRAM 	 'Communicator' OFF 					\
-                        	SIMPLESCREENRECORDER 'Recorder desktop' OFF)
+			i3WM)
+				downloadwget "https://sourceforge.net/projects/mazonos/files/latest/download"
+               	tarfull
+				echo "ck-launch-session dbus-launch --exit-with-session i3" > /mnt/etc/skel/.xinitrc
+				break ;;
+			esac ;;
 
-                        	# create choose softwares vars
-                        	libre= ; gimp= ; inkscape= ; qt5= ; sublime_text= ; vlc= ; openjdk= ; telegram=
-                        	echo "$rescustom" | while read LINHA
-                        	do
-                            	if [ $LINHA = "LIBREOFFICE" ]; then
-                                	libre="--exclude-from=/tmp/libre.exclude" 
-                                elif [ $LINHA = "GIMP" ]; then
-                                	gimp="--exclude-from=/tmp/gimp.exclude"
-                                elif [ $LINHA = "INKSCAPE" ]; then
-                                	inkscape="--exclude-from=/tmp/inkscape.exclude"
-                                elif [ $LINHA = "QT5" ]; then
-                                	qt5="--exclude-from=/tmp/qt5.exclude"
-                                elif [ $LINHA = "SUBLIME_TEXT" ]; then
-                                	sublime_text="--exclude-from=/tmp/sublime_text.exclude"
-                                elif [ $LINHA = "VLC" ]; then
-                                    vlc="--exclude-from=/tmp/vlc.exclude"
-                                elif [ $LINHA = "OPENJDK" ]; then
-									openjdk="--exclude-from=/tmp/openjdk.exclude"
-                                elif [ $LINHA = "TELEGRAM" ]; then
-									telegram="--exclude-from=/tmp/telegram.exclude"
-                                elif [ $LINHA = "SIMPLESCREENRECORDER" ]; then
-									ssr="--exclude-from=/tmp/ssr.exclude"
-                                fi
-                        	done
-                        	;;
+		minimal)
+			tarball_default=$tarball_min
+			cmsgversion=$cmsg015
+			dlwgetdefault
+			scrinstallmin
+			;;
+
+		custom)
+			rescustom=$(dialog --stdout                 					\
+            --separate-output                       						\
+            --checklist 'Choose install softwares:' 						\
+            0 0 0                                   						\
+			LIBREOFFICE  			'Office suite free' 				OFF	\
+			GIMP 		 			'GNU Image Manipulation Program' 	OFF	\
+			INKSCAPE 	 			'Draw freely' 						OFF	\
+			QT5 		 			'Framework' 						OFF \
+			SUBLIME_TEXT 			'Text editor for code' 				OFF \
+			VLC 		 			'Player video' 						OFF \
+            OPENJDK 	 			'Open Java' 						OFF \
+            TELEGRAM 	 			'Communicator' 						OFF	\
+            SIMPLESCREENRECORDER	'Recorder desktop' 					OFF	)
+
+			# create choose softwares vars
+			libre= ; gimp= ; inkscape= ; qt5= ; sublime_text= ; vlc= ; openjdk= ; telegram=
+			echo "$rescustom" | while read LINHA
+          	do
+				if [ $LINHA = "LIBREOFFICE" ]; then
+					libre="--exclude-from=/tmp/libre.exclude"
+				elif [ $LINHA = "GIMP" ]; then
+					gimp="--exclude-from=/tmp/gimp.exclude"
+				elif [ $LINHA = "INKSCAPE" ]; then
+					inkscape="--exclude-from=/tmp/inkscape.exclude"
+				elif [ $LINHA = "QT5" ]; then
+					qt5="--exclude-from=/tmp/qt5.exclude"
+				elif [ $LINHA = "SUBLIME_TEXT" ]; then
+					sublime_text="--exclude-from=/tmp/sublime_text.exclude"
+				elif [ $LINHA = "VLC" ]; then
+					vlc="--exclude-from=/tmp/vlc.exclude"
+				elif [ $LINHA = "OPENJDK" ]; then
+					openjdk="--exclude-from=/tmp/openjdk.exclude"
+				elif [ $LINHA = "TELEGRAM" ]; then
+					telegram="--exclude-from=/tmp/telegram.exclude"
+				elif [ $LINHA = "SIMPLESCREENRECORDER" ]; then
+					ssr="--exclude-from=/tmp/ssr.exclude"
+				fi
+			done
+           	;;
 			quit)
-				scrend 0
-				;;
+			scrend 0
+			;;
 		esac
 	done
 
@@ -520,7 +556,7 @@ scrformat(){
 	if [ $format='yes' ] ; then
     	# WARNING! FORMAT PARTITION
 	    #######################
-		umount $part >/dev/null
+		umount -rl $part 2> /dev/null
         mkfs -t ext4 -L "MAZONOS" $part
 		$LFORMAT=1
 	else
@@ -606,7 +642,7 @@ scrmain(){
 					1) menuinstall;;
 					2) choosedisk;;
 					3) choosepartition;;
-					4) choosedisk; choosepartition; dlmenu;;
+					4) choosedisk; choosepartition; menuinstall;;
 					5) menuinstall;;
 					6) scrend 0;;
 				esac
