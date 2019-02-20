@@ -12,7 +12,8 @@ helpMe(){
 	echo -e "usage: search-mazon [-u] [--update] or <package> \n \
 ------ LIST OPTIONS ------- \n \
 -u, --update     Update list packages in repositore online. Need Internet.\n \
-ex: search-mazon nano # for search."
+ex: search-mazon nano # for search.
+    search-mazon -u # for update list."
 	exit
 }
 
