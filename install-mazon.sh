@@ -9,8 +9,7 @@
 #      altered: 2019/02/17          licence: MIT      			#
 #################################################################
 
-#functions script
-# Define the dialog exit status codes
+# flag dialog exit status codes
 : ${D_OK=0}
 : ${D_CANCEL=1}
 : ${D_HELP=2}
@@ -23,27 +22,27 @@ ESC=255
 HEIGHT=0
 WIDTH=0
 
-#flag para disco/particao/montagem
+# flag para disco/particao/formatacao/montagem
 : ${LDISK=0}
 : ${LPARTITION=0}
 : ${LFORMAT=0}
 : ${LMOUNT=0}
 
-ok=0
-falso=1
-ccabec="MazonOS Linux installer v1.0"
-dir_install="/mnt/mazon"
-tarball_min="mazon_minimal-0.2.tar.xz"
-sha256_min="mazon_minimal-0.2.sha256sum"
-tarball_full="mazon_beta-1.2.tar.xz"
-sha256_full="mazon_beta-1.2.sha256sum"
+# vars
+declare -i ok=0
+declare -i falso=1
+declare -r ccabec="MazonOS Linux installer v1.0"
+declare -r dir_install="/mnt/mazon"
+declare -r url_mazon="http://mazonos.com/releases/"
+declare -r tarball_min="mazon_minimal-0.2.tar.xz"
+declare -r sha256_min="mazon_minimal-0.2.sha256sum"
+declare -r tarball_full="mazon_beta-1.2.tar.xz"
+declare -r sha256_full="mazon_beta-1.2.sha256sum"
 tarball_default=$tarball_full
 sh256_default=$sha256_full
-url_mazon="http://mazonos.com/releases/"
-pwd=$PWD
-cfstab=$dir_install"/etc/fstab"
-
-wiki=$(cat << _EOF
+declare -r pwd=$PWD
+declare -r cfstab=$dir_install"/etc/fstab"
+declare -r wiki=$(cat << _EOF
 Wiki
 There are two ways to install, with the install-mazon.sh (dep dialog) script or the manual form as follows:
 
@@ -101,78 +100,83 @@ Add a password with:
 Log in to the system with your new user and password, startx to start.
 _EOF)
 
-mensagem(){
-	dialog                                  \
-   		--title 'MazonOS Linux'     		\
-		--backtitle	"$ccabec"				\
-	   	--infobox "$*"    					\
+# lib functions script
+
+function mensagem(){
+	dialog								\
+   		--title 	'MazonOS Linux'		\
+		--backtitle	"$ccabec"			\
+	   	--infobox 	"$*"				\
 	    0 0
 }
 
-tolower(){
+function tolower(){
 	$1 | tr 'A-Z' 'a-z'
 }
 
-toloupper(){
+function toloupper(){
 	$1 | tr 'a-z' 'Z-A'
 }
 
-display_result() {
-	dialog 	--title "$2" 			\
-    		--no-collapse 			\
-			--backtitle	"$ccabec"	\
-    		--msgbox "$1" 			\
+function display_result() {
+	dialog 	--title 	"$2"			\
+    		--no-collapse				\
+			--backtitle	"$ccabec"		\
+    		--msgbox 	"$1" 			\
 			16 80
 }
 
-alerta(){
-	dialog 	--clear 				\
-			--title 	"$1" 		\
-			--backtitle	"$ccabec"	\
-			--msgbox 	"$2" 		\
+function alerta(){
+	dialog 	--clear						\
+			--title 	"$1" 			\
+			--backtitle	"$ccabec"		\
+			--msgbox 	"$2" 			\
 			9 60
 }
 
-info(){
-	dialog 	--clear 				\
-			--title 	"$cmsg002"	\
-			--backtitle	"$ccabec"	\
-			--msgbox 	"$*" 		\
+function info(){
+	dialog 	--clear 					\
+			--title 	"$cmsg002"		\
+			--backtitle	"$ccabec"		\
+			--msgbox 	"$*" 			\
 			10 60
 }
-conf(){
-    dialog							\
-			--title 	"$1" 		\
-			--backtitle	"$ccabec"	\
-			--yes-label "$yeslabel"	\
-			--no-label  "$nolabel"	\
-			--yesno 	"$2" 		\
+
+function conf(){
+    dialog								\
+			--title 	"$1" 			\
+			--backtitle	"$ccabec"		\
+			--yes-label "$yeslabel"		\
+			--no-label  "$nolabel"		\
+			--yesno 	"$2" 			\
 			10 100
 			return $?
 }
 
-confmulti(){
-    dialog							\
-			--title 	"$1" 		\
-			--backtitle	"$ccabec"	\
-			--yes-label "$yeslabel"	\
-			--no-label  "$nolabel"	\
-			--yesno 	"$*" 		\
+function confmulti(){
+    dialog								\
+			--title 	"$1" 			\
+			--backtitle	"$ccabec"		\
+			--yes-label "$yeslabel"		\
+			--no-label  "$nolabel"		\
+			--yesno 	"$*" 			\
 			10 100
 			return $?
 }
 
-inkey(){
-    dialog							\
-			--title 	"$2" 		\
-			--backtitle	"$ccabec"	\
-			--pause 	"$2" 		\
+function inkey(){
+    dialog								\
+			--title 	"$2" 			\
+			--backtitle	"$ccabec"		\
+			--pause 	"$2" 			\
 			0 0 "$1"
 }
 
-quit(){
+function quit(){
 	[ $? -ne 0 ] && { clear ; exit ;}
 }
+
+# functions script
 
 function sh_exectar(){
   	cd $dir_install
@@ -182,15 +186,15 @@ function sh_exectar(){
 	elif [ $? = 1 ]; then
 	    tar xJpvf $pwd/$tarball_default -C $dir_install
 	else
-		(pv -pteb $pwd/$tarball_default | \
-		tar xJpvf - -C $dir_install ) 2>&1 | \
-		dialog 	--backtitle "$ccabec" --gauge "Extracting files..." \
+		(pv -pteb $pwd/$tarball_default								\
+		|tar xJpvf - -C $dir_install ) 2>&1 						\
+		|dialog	--backtitle "$ccabec" --gauge "Extracting files..." \
 		6 50
 	fi
 }
 
-grubinstall(){
-	conf	" *** GRUB *** " "Would you like to install grub?\n\n*Remembering that we do not yet have dual boot support in our grub.\nIf use dualboot, use the grub from its other distribution with:\n# update-grub"
+function grubinstall(){
+	conf "*** GRUB ***" "$cGrubMsgInstall"
 	grubyes=$?
 	if [ $grubyes = 0 ]; then
 		cd $dir_install
@@ -199,15 +203,15 @@ grubinstall(){
 	    mount --rbind /dev dev/
 	    chroot . /bin/bash -c "grub-install ${part/[0-9]/}"
 		chroot . /bin/bash -c "grub-mkconfig -o /boot/grub/grub.cfg"
-	    scrfstab
-		sr_umountpartition
-	    alerta "*** GRUB *** " "ok! grub successfully installed"
+	    sh_fstab
+		sh_umountpartition
+	    alerta "*** GRUB *** " "$cgrubsuccess"
 	fi
-	sr_umountpartition
+	sh_umountpartition
 	sh_finish
 }
 
-scrfstab(){
+function sh_fstab(){
 	mkdir -p $dir_install/etc >/dev/null
 	xuuid=$(blkid | grep $part | awk '{print $3}')
 	label="/            ext4     defaults            1     1"
@@ -224,7 +228,7 @@ function sh_finish(){
 
 function sh_wgetdefault(){
 	local URL=$url_mazon$tarball_default
-	conf "cdlok1" "$cmsgversion"
+	conf "$cmsg005" "\n$cmsgversion"
 
 	local nchoice=$?
 	case $nchoice in
@@ -303,11 +307,11 @@ function menuinstall(){
         --title 		' *** INSTALL CONFIGURATION *** '				\
 		--backtitle 	"$ccabec"										\
 		--cancel-label	"$buttonback"									\
-		--menu			'Choose your option:'							\
+		--menu			"$cmsg004"										\
 		0 70 0															\
-	   	full			'*8.2G Free disk (Xfce4 or i3wm)'				\
-		minimal			'Minimall install, not X.'						\
-		quit			'Exit install'									)
+	   	full			"$cmsgfull"										\
+		minimal			"$cmsgmin"										\
+		quit			"$cmsgquit"										)
 #		custom			'Choose softwares. (GIMP, QT5, LIBREOFFICE...)'
 
 		exit_status=$?
@@ -327,10 +331,10 @@ function menuinstall(){
 			--backtitle 	"$ccabec"							\
 			--cancel-label	"$buttonback"						\
 			--title			'FULL INSTALATION'					\
-			--menu			'Choose your Desktop Enviroment:'	\
+			--menu			"$cchooseX:"						\
 			0 0 0                               		    	\
-			XFCE4	'Classic and powerfull!'					\
-			i3WM	'Desktop for advanceds guys B).'			)
+			XFCE4			"$cxfce4"							\
+			i3WM			"$ci3wm"							)
 
 			exit_status=$?
 			case $exit_status in
@@ -425,7 +429,7 @@ function menuinstall(){
 	#clear
 }
 
-sh_checkdisk(){
+function sh_checkdisk(){
 	dsk=$(df -h | grep "$sd" | awk '{print $1, $2, $3, $4, $5, $6, $7}')
 	#dsk=$(df | grep $sd | cut -c 1-})
 	#dsk=$(df -h | grep ^$sd)
@@ -444,7 +448,7 @@ sh_checkdisk(){
 	return $nchoice
 }
 
-sh_checkpartition(){
+function sh_checkpartition(){
 	cpart=$(df -h | grep "$part" | awk '{print $1, $2, $3, $4, $5, $6, $7}')
 	#dsk=$(df | grep $part | cut -c 1-})
 	#dsk=$(df -h | grep ^$part)
@@ -462,7 +466,7 @@ sh_checkpartition(){
 	return $nchoice
 }
 
-choosedisk(){
+function choosedisk(){
 	# escolha o disco a ser particionado // Choose disk to be parted
 	################################################################
 	#disks=( $(fdisk -l | egrep -o '^/dev/sd[a-z]'| sed "s/$/ '*' /") )
@@ -497,20 +501,20 @@ choosedisk(){
 	    	--stdout 													\
 	    	--title     	"$cmsg009" 									\
 			--cancel-label	"$buttonback"								\
-	    	--radiolist 	"$cmsg010"		 							\
+	    	--menu		 	"$cmsg010"		 							\
 	    	0 0 0 														\
-	    	"$cmsg012"  "$cmsg011"								 on 	\
-	    	newbie      "$cmsg013"					   		     off	)
+	    	"$cexpert"  	"$cmsg011"							 	 	\
+	    	"$cnewbie"     	"$cmsg013"				   		     		)
 
 			case "$typefmt" in
-				$cmsg012)
+				$cexpert)
 					cfdisk $sd
 					LDISK=1
 					local result=$( fdisk -l $sd )
 				    display_result "$result" "$cmsg011"
 					;;
 
-				newbie)
+				$cnewbie)
 					conf "$cmsg020" "$cmsg020\n$cmsg014"
 					local nb=$?
 					case $nb in
@@ -570,7 +574,7 @@ function sh_mountpartition(){
 	#menuinstall
 }
 
-choosepartition(){
+function choosepartition(){
 	# escolha a particao a ser instalada // Choose install partition
 	################################################################
 	#partitions=( $(blkid | cut -d: -f1 | sed "s/$/ '*' /") )
@@ -635,7 +639,7 @@ function sh_format(){
 	return $format
 }
 
-dlmenu(){
+function dlmenu(){
 	while true
 	do
 		dl=$(dialog 										\
@@ -694,7 +698,7 @@ scrmain(){
 		        2 "$cmsg006"						  						\
 		        3 "$cmsg007"												\
 			   	4 "Install"	   					     						\
-			   	5 "$cmsg008"						     					)
+			   	5 "$cmsgquit"						     					)
 
 				exit_status=$?
 				case $exit_status in
@@ -730,10 +734,13 @@ pt_BR(){
 	cmsg006="Particionar Disco"
 	cmsg007="Escolher partição para instalar"
 	cmsg008="Sair do instalador"
+	cmsgquit="Sair do instalador"
 	cmsg009="Escolha o disco para particionar:"
 	cmsg010="Escolha o tipo:"
 	cmsg011="Particionamento manual usando cfdisk"
 	cmsg012="Experiente"
+	cexpert="Experiente"
+	cnewbie="Novato"
 	cmsg013="Particionamento automatico (sfdisk)"
 	cmsg014="Tem certeza?"
 	cmsg015='A versão mínima não inclui o Xorg e DE.\nVocê gostaria de baixar o MazonOS minimal?'
@@ -755,6 +762,15 @@ pt_BR(){
 	cdlok4="\n\nIniciar a instalação agora?"
     plswait="Por favor aguarde, baixando pacote..."
 	cfinish="Instalação completa! Boas vibes.\nReboot para iniciar com MazonOS Linux. \n\nEnviar bugs root@mazonos.com"
+	cgrubsuccess="OK! GRUB instalado com sucesso!"
+	cGrubMsgInstall="Você gostaria de instalar o GRUB? \
+					\n\n*Lembrando que ainda não temos suporte a dual boot. \
+					\nSe precisar de dual boot, use o grub de outra distribuição com:\n# update-grub"
+	cchooseX="Escolha o seu ambiente de Desktop:"
+	cxfce4="Clássico e poderoso!"
+	ci3wm="Desktop para caras avançados B)."
+	cmsgmin="Instalação mínima, sem X"
+   	cmsgfull="Instalação completa. *8.2G de disco (Xfce4 ou i3wm)"
 }
 
 en_US(){
@@ -769,10 +785,13 @@ en_US(){
 	cmsg006="Partition Disk"
 	cmsg007="Choose partition to install"
 	cmsg008="Quit the installer"
+	cmsgquit="Quit the installer"
 	cmsg009="Choose the disk to partition:"
 	cmsg010="Choose type:"
 	cmsg011="Manual partitioning using cfdisk"
 	cmsg012="Expert"
+	cexpert="Expert"
+	cnewbie="Newbie"
 	cmsg013="Automatic partitioning (sfdisk)"
 	cmsg014="Are you sure?"
 	cmsg015='The minimum version does not include Xorg and DE. \nWould you like to download MazonOS minimal?'
@@ -793,6 +812,15 @@ en_US(){
 	cdlok4="\n\nStart the installation now?"
     plswait="Please wait, Downloading package..."
 	cfinish="Install Complete! Good vibes. \nReboot to start with MazonOS Linux. \n\nSend bugs - root@mazonos.com"
+	cgrubsucess="OK! GRUB successfully installed!"
+	cGrubMsgInstall="Would you like to install grub? \
+					\n\n*Remembering that we do not yet have dual boot support. \
+					\nIf use dualboot, use the grub from its other distribution with:\n# update-grub"
+	cchooseX="Choose your Desktop Environment:"
+	cxfce4="Classic and powerfull!"
+	ci3wm="Desktop for avanced guys B)."
+	cmsgmin="Minimum installation, not X"
+   	cmsgfull="Complete installation. *8.2G disk (Xfce4 or i3wm)"
 }
 
 function scrend(){
@@ -857,3 +885,11 @@ function init(){
 # Init - configuracao inicial
 clear
 init
+
+:<<'LIXO'
+Passagem padrão original de Lorem Ipsum, usada desde o século XVI.
+
+"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+LIXO
