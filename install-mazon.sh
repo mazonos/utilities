@@ -203,11 +203,9 @@ function grubinstall(){
 	    mount --rbind /dev dev/
 	    chroot . /bin/bash -c "grub-install ${part/[0-9]/}"
 		chroot . /bin/bash -c "grub-mkconfig -o /boot/grub/grub.cfg"
-	    sh_fstab
-		sh_umountpartition
 	    alerta "*** GRUB *** " "$cgrubsuccess"
 	fi
-	sh_umountpartition
+	#sh_umountpartition
 	sh_finish
 }
 
@@ -297,6 +295,7 @@ instalação. Confirma?"
 	esac
 
 	sh_exectar
+    sh_fstab
 	grubinstall
 }
 
