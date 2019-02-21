@@ -132,7 +132,7 @@ alerta(){
 			--title 	"$1" 		\
 			--backtitle	"$ccabec"	\
 			--msgbox 	"$2" 		\
-			7 60
+			9 60
 }
 
 info(){
@@ -180,9 +180,21 @@ function sh_exectar(){
   	cd $dir_install
 	which pv
 	if [ $? = 127 ]; then   # no which?
-	    tar xJpvf $pwd/$tarball_default -C $dir_install
+		>log.txt
+	    tar xJpvf $pwd/$tarball_default -C $dir_install > log.txt 2>&1	\
+		| tail -f log.txt > out 						\
+		| dialog                                     	\
+		   --title 'Monitorando Mensagens do Sistema'  	\
+		   --tailbox out                               	\
+		   0 0
 	elif [ $? = 1 ]; then
-	    tar xJpvf $pwd/$tarball_default -C $dir_install
+		>log.txt
+	    tar xJpvf $pwd/$tarball_default -C $dir_install > log.txt 2>&1	\
+		| tail -f log.txt > out 						\
+		|	dialog                                     	\
+		   --title 'Monitorando Mensagens do Sistema'  	\
+		   --tailbox out                               	\
+		   0 0
 	else
 		(pv -pteb $pwd/$tarball_default | \
 		tar xJpvf - -C $dir_install ) 2>&1 | \
@@ -620,8 +632,16 @@ function sh_format(){
 	    	# WARNING! FORMAT PARTITION
 		    #######################
 			umount -rl $part 2> /dev/null
-	        mkfs -t ext4 -L "MAZONOS" $part
-			LFORMAT=1
+	        mkfs -F -t ext4 -L "MAZONOS" $part > /dev/null
+			local nfmt=$?
+			if [ $nfmt = 0 ] ; then
+				alerta "MKFS" "Formatacao terminada com sucesso."
+				LFORMAT=1
+			else
+				alerta "MKFS" "Erro na Formatacao."
+				LFORMAT=0
+				return 1
+			fi
 		else
 			LFORMAT=0
 		fi
