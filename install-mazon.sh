@@ -491,12 +491,6 @@ function choosedisk(){
 	esac
 
 	if [ $sd <> 0 ]; then
-		sh_checkdisk
-		local nmontada=$?
-		if [ $nmontada = 1 ]; then
-			alerta "CHOOSEDISK" "Necessario desmontar particao para reparticionar."
-			choosedisk
-		fi
  		typefmt=$(dialog \
 	    	--stdout 													\
 	    	--title     	"$cmsg009" 									\
@@ -515,6 +509,12 @@ function choosedisk(){
 					;;
 
 				$cnewbie)
+					sh_checkdisk
+					local nmontada=$?
+					if [ $nmontada = 1 ]; then
+						alerta "CHOOSEDISK" "Necessário desmontar particao para reparticionar automaticamente."
+						choosedisk
+					fi
 					conf "$cmsg020" "$cmsg020\n$cmsg014"
 					local nb=$?
 					case $nb in
