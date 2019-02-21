@@ -179,7 +179,6 @@ quit(){
 function sh_exectar(){
   	cd $dir_install
 	which pv
-	info $?
 	if [ $? = 127 ]; then   # no which?
 	    tar xJpvf $pwd/$tarball_default -C $dir_install
 	elif [ $? = 1 ]; then
@@ -205,10 +204,9 @@ grubinstall(){
 	    scrfstab
 		sr_umountpartition
 	    alerta "*** GRUB *** " "ok! grub successfully installed"
-	else
-		sr_umountpartition
-		sh_finish
 	fi
+	sr_umountpartition
+	sh_finish
 }
 
 scrfstab(){
