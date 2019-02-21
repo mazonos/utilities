@@ -845,7 +845,7 @@ function init(){
 					scrmain
 					;;
 				3)
-					dialog --msgbox "$wiki" 0 0
+					dialog --no-collapse --title "MazonOS Wiki" --msgbox "$wiki" 0 0
 					;;
 				4)
 					scrend 0
