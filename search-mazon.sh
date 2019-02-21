@@ -12,7 +12,8 @@ helpMe(){
 	echo -e "usage: search-mazon [-u] [--update] or <package> \n \
 ------ LIST OPTIONS ------- \n \
 -u, --update     Update list packages in repositore online. Need Internet.\n \
-ex: search-mazon nano # for search."
+ex: search-mazon nano # for search.
+    search-mazon -u # for update list."
 	exit
 }
 
@@ -71,7 +72,7 @@ fi
 #########################
 ## Search in list package used in command.
 pkg=$(grep $1 $VARLIB/list)
-pkgInstall=$(echo $pkg | cut -d"/" -f2)
+declare -g pkgInstall=$(echo $pkg | cut -d"/" -f2)
 declare -g pkgNumber=0
 
 # Check package exist.
@@ -100,8 +101,8 @@ if [[ $pkg != "" ]]; then
 				echo ""
 
 				# Install Package.
-				read -p "Install $ee ? [Y/n]" install
-				if [ $install = 'y' ] || [ $install = 'Y' ] || [[ $install = "" ]]; then
+				read -p "Install $ee ? [Y/n]" inst
+				if [ $inst = 'y' ] || [ $inst = 'Y' ] || [[ $inst = "" ]]; then
 					banana -i $pkgInstall
 				fi
 			fi
