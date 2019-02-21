@@ -180,21 +180,9 @@ function sh_exectar(){
   	cd $dir_install
 	which pv
 	if [ $? = 127 ]; then   # no which?
-		>log.txt
-	    tar xJpvf $pwd/$tarball_default -C $dir_install > log.txt 2>&1	\
-		| tail -f log.txt > out 						\
-		| dialog                                     	\
-		   --title 'Monitorando Mensagens do Sistema'  	\
-		   --tailbox out                               	\
-		   0 0
+	    tar xJpvf $pwd/$tarball_default -C $dir_install
 	elif [ $? = 1 ]; then
-		>log.txt
-	    tar xJpvf $pwd/$tarball_default -C $dir_install > log.txt 2>&1	\
-		| tail -f log.txt > out 						\
-		|	dialog                                     	\
-		   --title 'Monitorando Mensagens do Sistema'  	\
-		   --tailbox out                               	\
-		   0 0
+	    tar xJpvf $pwd/$tarball_default -C $dir_install
 	else
 		(pv -pteb $pwd/$tarball_default | \
 		tar xJpvf - -C $dir_install ) 2>&1 | \
