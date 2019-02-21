@@ -218,7 +218,7 @@ function sh_fstab(){
 	sed -ir "/<xxx>/ i $xuuid $label" $cfstab
 	sed -i 's|/dev/<xxx>|#'$part'|g' $cfstab
 	local result=$( cat $cfstab )
-	display_result "$result" "$cmsg011"
+	display_result "$result" "$cfstab"
 }
 
 function sh_finish(){
@@ -274,6 +274,7 @@ function sh_check_install(){
 	if [ $LFORMAT -eq 0 ]; then
 		sh_format
 		if [ $? = 1 ]; then
+			LPARTITION=0
 			menuinstall
 		fi
 	fi
@@ -604,7 +605,7 @@ function choosepartition(){
 			;;
 	esac
 	LPARTITION=1
-	sh_format
+	#sh_format
 	#sh_mountpartition
 }
 
