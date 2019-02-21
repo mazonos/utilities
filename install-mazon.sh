@@ -43,8 +43,7 @@ url_mazon="http://mazonos.com/releases/"
 pwd=$PWD
 cfstab=$dir_install"/etc/fstab"
 
-wiki(){
-cstr=$(cat << _EOF
+wiki=$(cat << _EOF
 Wiki
 There are two ways to install, with the install-mazon.sh (dep dialog) script or the manual form as follows:
 
@@ -101,7 +100,6 @@ Add a password with:
 
 Log in to the system with your new user and password, startx to start.
 _EOF)
-}
 
 mensagem(){
 	dialog                                  \
@@ -803,50 +801,6 @@ function scrend(){
 	exit $1
 }
 
-choosetypeuser(){
-	while true; do
-		i18=$(dialog													\
-			--clear														\
-			--stdout                                                  	\
-			--backtitle	 	"$ccabec"					 				\
-			--title 		'Bem-vindo ao MazonOS install v1.0'			\
-			--cancel-label	"Encerrar" 									\
-	        --menu			'\nEscolha o idioma do instalador:\n'		\
-	        0 80 0                                 						\
-	        1 'Português'						 						\
-	       	2 'English'							  						\
-		   	3 'Wiki'													\
-		   	4 "$menuquit"												)
-
-			exit_status=$?
-			case $exit_status in
-				$ESC)
-					scrend 1
-					exit 1
-					;;
-				$CANCEL)
-					scrend 0
-					;;
-			esac
-			case $i18 in
-				1)
-					pt_BR
-					scrmain
-					;;
-				2)
-					en_US
-					scrmain
-					;;
-				3)
-					dialog --no-collapse --title "MazonOS Wiki" --textbox wiki 0 0
-					;;
-				4)
-					scrend 0
-					;;
-			esac
-	done
-}
-
 function sh_checkroot(){
 	if [ "$(id -u)" != "0" ]; then
 		alerta "MazonOS Linux installer" "\nVoce deve executar este script como root!"
@@ -891,7 +845,7 @@ function init(){
 					scrmain
 					;;
 				3)
-					dialog --no-collapse --title "MazonOS Wiki" --textbox wiki 0 0
+					dialog --msgbox "$wiki" 0 0
 					;;
 				4)
 					scrend 0
