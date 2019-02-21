@@ -449,6 +449,16 @@ function sh_checkdisk(){
 	return $nchoice
 }
 
+function sh_checksimple(){
+	local sdsk=$(df -h | grep "$sd" | awk '{print $1, $2, $3, $4, $5, $6, $7}')
+
+	local nchoice=0
+	if [ "$sdsk" <> " " ]; then
+		alerta "** AVISO **" "\nSó para lembrar que o disco contém partições montadas.\n\n$sdsk"
+	fi
+	return $nchoice
+}
+
 function sh_checkpartition(){
 	cpart=$(df -h | grep "$part" | awk '{print $1, $2, $3, $4, $5, $6, $7}')
 	#dsk=$(df | grep $part | cut -c 1-})
@@ -503,6 +513,7 @@ function choosedisk(){
 
 			case "$typefmt" in
 				$cexpert)
+					sh_checksimple
 					cfdisk $sd
 					LDISK=1
 					local result=$( fdisk -l $sd )
