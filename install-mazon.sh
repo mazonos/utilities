@@ -6,7 +6,7 @@
 #      @utor: Diego Sarzi 		<diegosarzi@gmail.com>			#
 #             Vilmar Catafesta 	<vcatafesta@gmail.com>			#
 #      created: 2019/02/15          licence: MIT      			#
-#      altered: 2019/02/18          licence: MIT      			#
+#      altered: 2019/02/17          licence: MIT      			#
 #################################################################
 
 #functions script
@@ -26,11 +26,12 @@ WIDTH=0
 #flag para disco/particao/montagem
 : ${LDISK=0}
 : ${LPARTITION=0}
-: ${LMOUNT=0}
 : ${LFORMAT=0}
+: ${LMOUNT=0}
 
 ok=0
 falso=1
+ccabec="MazonOS Linux installer v1.0"
 dir_install="/mnt/mazon"
 tarball_min="mazon_minimal-0.2.tar.xz"
 sha256_min="mazon_minimal-0.2.sha256sum"
@@ -131,7 +132,7 @@ alerta(){
 			--title 	"$1" 		\
 			--backtitle	"$ccabec"	\
 			--msgbox 	"$2" 		\
-			5 40
+			7 60
 }
 
 info(){
@@ -178,12 +179,13 @@ quit(){
 function sh_exectar(){
   	cd $dir_install
 	which pv
+	info $?
 	if [ $? = 127 ]; then   # no which?
 	    tar xJpvf $pwd/$tarball_default -C $dir_install
 	elif [ $? = 1 ]; then
 	    tar xJpvf $pwd/$tarball_default -C $dir_install
 	else
-		(pv -n $pwd/$tarball_default | \
+		(pv -pteb $pwd/$tarball_default | \
 		tar xJpvf - -C $dir_install ) 2>&1 | \
 		dialog 	--backtitle "$ccabec" --gauge "Extracting files..." \
 		6 50
@@ -191,7 +193,7 @@ function sh_exectar(){
 }
 
 grubinstall(){
-	conf ' *** GRUB *** ' 'Would you like to install grub?\n\n*Remembering that we do not yet have dual boot support in our grub.\nIf use dualboot, use the grub from its other distribution with:\n# update-grub'
+	conf	" *** GRUB *** " "Would you like to install grub?\n\n*Remembering that we do not yet have dual boot support in our grub.\nIf use dualboot, use the grub from its other distribution with:\n# update-grub"
 	grubyes=$?
 	if [ $grubyes = 0 ]; then
 		cd $dir_install
@@ -203,11 +205,9 @@ grubinstall(){
 	    scrfstab
 		sr_umountpartition
 	    alerta "*** GRUB *** " "ok! grub successfully installed"
-		finish
 	else
 		sr_umountpartition
-		alerta ' *** GRUB ERROR ***' 'ops, error install grub. please check bugs'
-      	menuinstall
+		sh_finish
 	fi
 }
 
@@ -221,9 +221,8 @@ scrfstab(){
 	display_result "$result" "$cmsg011"
 }
 
-finish(){
-	alerta 	' *** INSTALL COMPLETE *** '	\
-			'Install Complete! Good vibes.\nModify /mnt/etc/fstab and reboot.\n\nSend bugs - root@mazonos.com'
+function sh_finish(){
+	alerta "*** INSTALL ***" "$cfinish"
 	exit
 }
 
@@ -266,14 +265,17 @@ function sh_wgetdefault(){
 }
 
 function sh_check_install(){
-	if [ $LDISK -eq 0 ]; then
-		choosedisk
-	fi
+#	if [ $LDISK -eq 0 ]; then
+#		choosedisk
+#	fi
 	if [ $LPARTITION -eq 0 ]; then
 		choosepartition
 	fi
 	if [ $LFORMAT -eq 0 ]; then
 		sh_format
+		if [ $? = 1 ]; then
+			menuinstall
+		fi
 	fi
 	if [ $LMOUNT -eq 0 ]; then
 		sh_mountpartition
@@ -423,32 +425,52 @@ function menuinstall(){
 	# grub install
 	#######################
    	#grubinstall
-	#finish
+	#sh_finish
 	#clear
 }
 
 sh_checkdisk(){
-	dsk=$(df -h | grep "/dev/sdb" | awk '{print $1, $2, $3, $4, $5, $6, $7}')
+	dsk=$(df -h | grep "$sd" | awk '{print $1, $2, $3, $4, $5, $6, $7}')
 	#dsk=$(df | grep $sd | cut -c 1-})
 	#dsk=$(df -h | grep ^$sd)
 	#dsk=$(df -h | grep "$sd")
 
+	local nchoice=0
 	if [ "$dsk" <> " " ]; then
 		conf "** AVISO **" "\nO disco selecionado contém partições montadas.\n\n$dsk\n\nDesmontar?"
-		local nchoice=$?
+		nchoice=$?
 		if [ $nchoice = 0 ]; then
 			for i in $(seq 1 10); do
 				umount -rl $sd$i 2> /dev/null
 			done
 		fi
 	fi
+	return $nchoice
+}
+
+sh_checkpartition(){
+	cpart=$(df -h | grep "$part" | awk '{print $1, $2, $3, $4, $5, $6, $7}')
+	#dsk=$(df | grep $part | cut -c 1-})
+	#dsk=$(df -h | grep ^$part)
+	#dsk=$(df -h | grep "$part")
+
+	local nchoice=0
+	if [ "$cpart" <> " " ]; then
+		conf "** AVISO **" "\nA partição está montada.\n\n$cpart\n\nDesmontar?"
+		nchoice=$?
+		if [ $nchoice = 0 ]; then
+			umount -rl $part 2> /dev/null
+			LMOUNT=0
+		fi
+	fi
+	return $nchoice
 }
 
 choosedisk(){
 	# escolha o disco a ser particionado // Choose disk to be parted
 	################################################################
 	#disks=( $(fdisk -l | egrep -o '^/dev/sd[a-z]'| sed "s/$/ '*' /") )
-	$LDISK=0
+	LDISK=0
 	disks=($(ls /dev/sd* | grep -o '/dev/sd[a-z]' | cat | sort | uniq | sed "s/$/ '*' /"))
 	sd=$(dialog --clear 														\
 				--backtitle	 	"$ccabec"					 					\
@@ -470,6 +492,11 @@ choosedisk(){
 
 	if [ $sd <> 0 ]; then
 		sh_checkdisk
+		local nmontada=$?
+		if [ $nmontada = 1 ]; then
+			alerta "CHOOSEDISK" "Necessario desmontar particao para reparticionar."
+			choosedisk
+		fi
  		typefmt=$(dialog \
 	    	--stdout 													\
 	    	--title     	"$cmsg009" 									\
@@ -481,8 +508,8 @@ choosedisk(){
 
 			case "$typefmt" in
 				$cmsg012)
-					cfdisk --color=always $sd
-					$LDISK=1
+					cfdisk $sd
+					LDISK=1
 					local result=$( fdisk -l $sd )
 				    display_result "$result" "$cmsg011"
 					;;
@@ -493,7 +520,7 @@ choosedisk(){
 					case $nb in
 						$D_OK)
 							echo "label: dos" | echo ";" | echo "id=83" | sfdisk --force $sd >/dev/null
-							$LDISK=1
+							LDISK=1
 							local result=$( fdisk -l $sd )
 						    display_result "$result" "$csmg013"
 							;;
@@ -510,7 +537,7 @@ choosedisk(){
 function sh_umountpartition(){
 	mensagem "Aguarde, Desmontando particao de trabalho."
 	umount -rl $part 2> /dev/null
-	$LMOUNT=0
+	LMOUNT=0
 	cd $pwd
 	#menuinstall
 }
@@ -528,7 +555,7 @@ function sh_mountpartition(){
             if [ $? = 0 ]; then
 				loop
 			fi
-           	$LMOUNT=0
+           	LMOUNT=0
 			break
 		fi
 		if [ $? = 1 ]; then # fail?
@@ -536,12 +563,12 @@ function sh_mountpartition(){
             if [ $? = 0 ]; then
 				loop
 			fi
-           	$LMOUNT=0
+           	LMOUNT=0
 			break
 		fi
 		break
 	done
-	$LMOUNT=1
+	LMOUNT=1
 	mensagem "Aguarde, Entrando no diretorio de trabalho."
 	cd $dir_install
 	#menuinstall
@@ -552,7 +579,7 @@ choosepartition(){
 	################################################################
 	#partitions=( $(blkid | cut -d: -f1 | sed "s/$/ '*' /") )
 	#partitions=( $(ls $sd* | grep -o '/dev/sd[a-z][0-9]' | sed "s/$/ '*' /") )
-	$LPARTITION=0
+	LPARTITION=0
 	partitions=( $(fdisk -l | sed -n /sd[a-z][0-9]/p | awk '{print $1,$5}'))
 	part=$(dialog 														\
 			--clear	 													\
@@ -565,36 +592,43 @@ choosepartition(){
 	exit_status=$?
 	case $exit_status in
 		$ESC)
-			$LPARTITION=0
+			LPARTITION=0
 			#scrend 1
 			#exit 1
 			scrmain
 			;;
 		$CANCEL)
-			$LPARTITION=0
+			LPARTITION=0
 			#scrend 0
 			scrmain
 			;;
 	esac
-	$LPARTITION=1
-	#sh_format
+	LPARTITION=1
+	sh_format
 	#sh_mountpartition
 }
 
 function sh_format(){
 	# deseja formatar?
-	$LFORMAT=0
-	format=
-    conf " *** FORMAT *** " "\n   $cmsg020 \n\n   $cmsg021 $part ?" && format="yes"
-	if [ $format='yes' ] ; then
-    	# WARNING! FORMAT PARTITION
-	    #######################
-		umount -rl $part 2> /dev/null
-        mkfs -t ext4 -L "MAZONOS" $part
-		$LFORMAT=1
-	else
-		$LFORMAT=0
+	sh_checkpartition
+    local nmontada=$?
+	local format=1
+
+	if [ $nmontada = 0 ] ; then
+		LFORMAT=0
+	    conf " *** FORMAT *** " "\n   $cmsg020 \n\n   $cmsg021 $part ?"
+		format=$?
+		if [ $format = 0 ] ; then
+	    	# WARNING! FORMAT PARTITION
+		    #######################
+			umount -rl $part 2> /dev/null
+	        mkfs -t ext4 -L "MAZONOS" $part
+			LFORMAT=1
+		else
+			LFORMAT=0
+		fi
 	fi
+	return $format
 }
 
 dlmenu(){
@@ -682,7 +716,6 @@ scrmain(){
 
 pt_BR(){
 	lang="pt_BR"
-	ccabec="MazonOS Linux installer v1.0"
 	buttonback="Voltar"
 	cmsg000="Sair"
 	cmsg001="MazonOS Linux INSTALL v1.0"
@@ -716,13 +749,12 @@ pt_BR(){
 	cdlok2="\n[ok] Download concluído com sucesso."
 	cdlok3="\n[ok] $tarball_default encontrado."
 	cdlok4="\n\nIniciar a instalação agora?"
-    plswait="Por favor aguarde, baixando...""
-	cfinish='Instalação completa! Boas vibes.\nReboot para iniciar com MazonOS Linux. \n\nEnviar bugs root@mazonos.com'"
+    plswait="Por favor aguarde, baixando pacote..."
+	cfinish="Instalação completa! Boas vibes.\nReboot para iniciar com MazonOS Linux. \n\nEnviar bugs root@mazonos.com"
 }
 
 en_US(){
 	lang="en_US"
-	ccabec="MazonOS Linux installer v1.0"
 	buttonback="Back"
 	cmsg000="Exit"
 	cmsg001="MazonOS Linux INSTALL v1.0"
@@ -755,8 +787,8 @@ en_US(){
 	cdlok2="\n[ok] Download completed successfully."
 	cdlok3="\n[ok] $tarball_default found."
 	cdlok4="\n\nStart the installation now?"
-    plswait="Please wait, Downloading...""
-	cfinish='Install Complete! Good vibes. \nReboot to start with MazonOS Linux. \n\nSend bugs - root@mazonos.com'"
+    plswait="Please wait, Downloading package..."
+	cfinish="Install Complete! Good vibes. \nReboot to start with MazonOS Linux. \n\nSend bugs - root@mazonos.com"
 }
 
 function scrend(){
@@ -809,7 +841,16 @@ choosetypeuser(){
 	done
 }
 
+function sh_checkroot(){
+	if [ "$(id -u)" != "0" ]; then
+		alerta "MazonOS Linux installer" "\nVoce deve executar este script como root!"
+		scrend 0
+	fi
+}
+
+
 function init(){
+	sh_checkroot
 	while true; do
 		i18=$(dialog													\
 			--clear														\
