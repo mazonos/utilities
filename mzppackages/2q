@@ -45,6 +45,7 @@ if [ $1 = "-u" ] || [ $1 = "--update" ]; then
 
 	## Updating FOLDER from website mazonos.com
 	log_info_msg "Updating Folders..."
+	printf "folders"
 	wget -c -q http://mazonos.com/packages
 	evaluate_retval
 	echo "Updating Packages..."
@@ -58,8 +59,7 @@ if [ $1 = "-u" ] || [ $1 = "--update" ]; then
 	##########################
 	for i in $cleanFolders; do
 		declare -g ii=$i
-		log_info_msg "Updating... "
-		printf $i
+		evaluate_retval $i
 		wget -c -q "http://mazonos.com/packages/$i"
 		evaluate_retval
 		package=$(cat "$VARLIB/$i" | grep href | sed 's/      <a href="//g' | cut -d/ -f1 | sed 's/">.*<//g' | grep -v sha256 | more +2)
@@ -113,7 +113,6 @@ if [[ $pkg != "" ]]; then
 				read -p "Install $ee ? [Y/n]" install
 				if [[ $install = "" ]] || [ $install = 'y' ] || [ $install = 'Y' ]; then
 					banana -i $pkgInstall
-					echo ""
 				fi
 			fi
 		done
