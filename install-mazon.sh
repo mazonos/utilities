@@ -8,6 +8,7 @@
 #      created: 2019/02/15          licence: MIT      			#
 #      altered: 2019/02/17          licence: MIT      			#
 #################################################################
+. /chili/box
 
 # flag dialog exit status codes
 : ${D_OK=0}
@@ -17,6 +18,10 @@
 : ${D_ITEM_HELP=4}
 : ${D_ESC=255}
 
+TRUE=0
+OK=0
+NOK=1
+FALSE=1
 CANCEL=1
 ESC=255
 HEIGHT=0
@@ -33,13 +38,14 @@ declare -i ok=0
 declare -i falso=1
 declare -r ccabec="MazonOS Linux installer v1.0"
 declare -r dir_install="/mnt/mazon"
+declare -r site="mazonos.com"
 declare -r url_mazon="http://mazonos.com/releases/"
 declare -r tarball_min="mazon_minimal-0.2.tar.xz"
 declare -r sha256_min="mazon_minimal-0.2.sha256sum"
 declare -r tarball_full="mazon_beta-1.2.tar.xz"
 declare -r sha256_full="mazon_beta-1.2.sha256sum"
 tarball_default=$tarball_full
-sh256_default=$sha256_full
+sha256_default=$sha256_full
 declare -r pwd=$PWD
 declare -r cfstab=$dir_install"/etc/fstab"
 declare -r wiki=$(cat << _EOF
@@ -193,11 +199,41 @@ function sh_exectar(){
 	fi
 }
 
+function sh_bind(){
+	conf "*** BIND ***" "Montar chroot?"
+	bindyes=$?
+
+	if [ $bindyes = 0 ]; then
+		if [ $LPARTITION -eq 0 ]; then
+			choosepartition
+		fi
+		cd $dir_install
+		mkdir -p $dir_install/proc
+		mkdir -p $dir_install/sys
+		mkdir -p $dir_install/dev
+	   	mount --type proc /proc proc/
+		mount --rbind /sys sys/
+	    mount --rbind /dev dev/
+	    #chroot . /bin/bash -c "grub-install ${part/[0-9]/}"
+		#chroot . /bin/bash -c "grub-mkconfig -o /boot/grub/grub.cfg"
+	    alerta "*** BIND *** " "CHROOT OK"
+	fi
+	#sh_umountpartition
+	#sh_finish
+}
+
 function grubinstall(){
 	conf "*** GRUB ***" "$cGrubMsgInstall"
 	grubyes=$?
+
 	if [ $grubyes = 0 ]; then
+		if [ $LPARTITION -eq 0 ]; then
+			choosepartition
+		fi
 		cd $dir_install
+		mkdir -p $dir_install/proc
+		mkdir -p $dir_install/sys
+		mkdir -p $dir_install/dev
 	   	mount --type proc /proc proc/
 		mount --rbind /sys sys/
 	    mount --rbind /dev dev/
@@ -210,6 +246,9 @@ function grubinstall(){
 }
 
 function sh_fstab(){
+	if [ $LPARTITION -eq 0 ]; then
+		choosepartition
+	fi
 	mkdir -p $dir_install/etc >/dev/null
 	xuuid=$(blkid | grep $part | awk '{print $3}')
 	label="/            ext4     defaults            1     1"
@@ -709,7 +748,8 @@ scrmain(){
 		        2 "$cmsg006"						  						\
 		        3 "$cmsg007"												\
 			   	4 "Install"	   					     						\
-			   	5 "$cmsgquit"						     					)
+			   	5 "Ferramentas/configuracoes"		     					\
+			   	6 "$cmsgquit"						     					)
 
 				exit_status=$?
 				case $exit_status in
@@ -728,7 +768,8 @@ scrmain(){
 					2) choosedisk;;
 					3) choosepartition;;
 					4) menuinstall;;
-					5) scrend 0;;
+					5) sh_tools;;
+					6) scrend 0;;
 				esac
 	done
 }
@@ -892,6 +933,46 @@ function init(){
 			esac
 	done
 }
+
+sh_tools(){
+	while true
+	do
+		tools=$(dialog 														\
+				--stdout                                                  	\
+				--backtitle 	"$ccabec"									\
+				--title 		"$cmsg001"						  			\
+				--cancel-label	"$buttonback"								\
+		        --menu 			"$cmsg003\n\n$cmsg004" 		 				\
+		        0 0 0                                 						\
+		        1 "Instalar Grub"											\
+		        2 "Alterar fstab"					  						\
+		        3 "Configurar usuario e senha"								\
+		        4 "Configurar chroot"										\
+			   	5 "$cmsgquit"						     					)
+
+				exit_status=$?
+				case $exit_status in
+					$ESC)
+						#scrend 1
+						#exit 1
+						scrmain
+						;;
+					$CANCEL)
+						#scrend 0
+						scrmain
+						;;
+				esac
+		        case $tools in
+					1) grubinstall;;
+					2) sh_fstab;;
+					3) sh_adduser;;
+					4) sh_bind;;
+					5) scrend 0;;
+				esac
+	done
+}
+
+
 
 # Init - configuracao inicial
 clear
