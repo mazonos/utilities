@@ -390,6 +390,14 @@ function quit(){
 
 # functions script
 
+function sh_testarota(){
+    cinfo=`log_info_msg "Aguarde, testando rota para o servidor MazonOS..."`
+    msg "INFO" "$cinfo"
+    ping -c 2 $site > /dev/null 2>&1
+    evaluate_retval
+    return $?
+}
+
 function sh_adduser(){
 
 	info "$cuser"
@@ -429,12 +437,11 @@ function sh_confadduser(){
 
 }
 
-
 function sh_exectar(){
 	local nret
   	cd $dir_install
-	which pv
-	if [ $? <> $true ]; then
+	test -e /usr/bin/pv
+	if [ $? = $false ] ; then
 	    tar xJpvf $pwd/$tarball_default -C $dir_install
 		nret=$?
 	else
@@ -1229,8 +1236,23 @@ function sh_checkroot(){
 	fi
 }
 
+function sh_testdialog(){
+	grafico=$false
+	cinfo=`log_info_msg "Aguarde, verificando dialog..."`
+    msg "INFO" "$cinfo"
+    test -e /usr/bin/dialog > /dev/null 2>&1
+    evaluate_retval
+
+	if [ $? = $false ]; then
+		echo "Voce deve instalar o pacote dialog para executar o install-mazon!"
+		scrend 1
+	fi
+	grafico=$true
+}
+
 
 function init(){
+	sh_testdialog
 	sh_checkroot
 	while true; do
 		i18=$(dialog													\
