@@ -105,7 +105,7 @@ declare -i grafico=$true
 declare -i ok=0
 declare -r ccabec="MazonOS Linux installer v1.0"
 declare -r dir_install="/mnt/mazon"
-declare -r site="mazonos.com"
+declare -r site="mazonos.com.br"
 declare -r url_mazon="http://mazonos.com/releases/"
 declare -r tarball_min="mazon_minimal-0.2.tar.xz"
 declare -r sha256_min="mazon_minimal-0.2.sha256sum"
@@ -548,8 +548,15 @@ function sh_finish(){
 
 function sh_wgetdefault(){
 	local URL=$url_mazon$tarball_default
-	conf "$cmsg005" "\n$cmsgversion"
 
+	sh_testarota
+
+	if [ $? = $false ]; then
+		info "\nOps, sem rota para o servidor da MazonOS!\nVerifique sua internet."
+		menuinstall
+	fi
+
+	conf "$cmsg005" "\n$cmsgversion"
 	local nchoice=$?
 	case $nchoice in
 		$D_OK)
