@@ -579,10 +579,10 @@ function sh_wgetdefault(){
 	test -e $tarball_default
 	local nfound=$?
 
-	if [ $nfound = $true ]
+	if [ $nfound = $true ]; then
 		clinksha=$url_mazon$sha256_default
 		test -e $clinksha
-		if [ $? = $true ]
+		if [ $? = $true ]; then
 			sh_testsha256sum
 			if [ $? = $false ]; then
 				sh_testarota
