@@ -633,7 +633,12 @@ function sh_wgetdefault(){
 			wget -c $URL 2>&1 | \
 		    	stdbuf -o0 awk '/[.] +[0-9][0-9]?[0-9]?%/ { print substr($0,63,3) }' | \
         		dialog --title "$plswait" --backtitle "$ccabec" --gauge $URL 7 70
-			;;
+				sh_testsha256sum
+				if [ $? = $false ]; then
+					info "\nOps, Pacote corrompido."
+					menuinstall
+				fi
+		;;
 
 			sh_testsha256sum
 			if [ $? = $false ]; then
