@@ -933,8 +933,8 @@ function choosepartition(){
 	#partitions=( $(blkid | cut -d: -f1 | sed "s/$/ '*' /") )
 	#partitions=( $(ls $sd* | grep -o '/dev/sd[a-z][0-9]' | sed "s/$/ '*' /") )
 	LPARTITION=0
-	#partitions=( $(fdisk -l | sed -n /sd[a-z][0-9]/p | awk '{print $1,$5}'))
-	partitions=( $(fdisk -l | cut -dk -f2 | grep -o /sd[a-z][0-9]))
+	#partitions=( $(fdisk -l | cut -dk -f2 | grep -o /sd[a-z][0-9]))
+	partitions=( $(fdisk -l | sed -n /sd[a-z][0-9]/p | awk '{print $1,$5}'))
 	part=$(dialog 														\
 			--clear	 													\
 			--backtitle	 	"$ccabec"					 				\
