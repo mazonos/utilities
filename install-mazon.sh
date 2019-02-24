@@ -398,6 +398,7 @@ function sh_adduser(){
 		cinfo=`log_info_msg "Aguarde, criando usuario..."`
 	    msg "INFO" "$cinfo"
 	    chroot . /bin/bash -c "useradd -m -G $cgroups $cuser -p $cpass > /dev/null 2>&1"
+	    chroot . /bin/bash -c "(echo $cuser:$cpass) | chpasswd > /dev/null 2>&1"
 	    evaluate_retval
 	fi
 }
