@@ -319,7 +319,7 @@ function mensagem(){
    		--title 	'MazonOS Linux'		\
 		--backtitle	"$ccabec"			\
 	   	--infobox 	"$*"				\
-	    0 0
+	    6 60
 }
 
 function tolower(){
@@ -486,13 +486,13 @@ function sh_exectar(){
 
 function sh_initbind(){
 	cd $dir_install
-	mkdir -p $dir_install/home
-	mkdir -p $dir_install/proc
-	mkdir -p $dir_install/sys
-	mkdir -p $dir_install/dev
-   	mount --type proc /proc proc/
-	mount --rbind /sys sys/
-    mount --rbind /dev dev/
+	mkdir -p $dir_install/home > /dev/null 2>&1
+	mkdir -p $dir_install/proc > /dev/null 2>&1
+	mkdir -p $dir_install/sys > /dev/null 2>&1
+	mkdir -p $dir_install/dev > /dev/null 2>&1
+   	mount --type proc /proc proc/ > /dev/null 2>&1
+	mount --rbind /sys sys/ > /dev/null 2>&1
+    mount --rbind /dev dev/ > /dev/null 2>&1
 }
 
 
@@ -506,6 +506,7 @@ function sh_bind(){
 			return $STANDALONE
 		fi
 	fi
+
 	if [ $LPARTITION -eq 0 ]; then
 		choosepartition
 		if [ $LPARTITION -eq 0 ]; then
@@ -513,7 +514,13 @@ function sh_bind(){
 			return 1
 		fi
 	fi
+
+	if [ $LMOUNT -eq 0 ]; then
+		sh_mountpartition
+	fi
+
 	sh_initbind
+
 	if [ $STANDALONE = $true ]; then
 	    alerta "*** BIND *** " "BIND OK"
 		STANDALONE = $false
@@ -523,21 +530,36 @@ function sh_bind(){
 function grubinstall(){
 	conf "*** GRUB ***" "$cGrubMsgInstall"
 	grubyes=$?
+	LDISK=0
 
-	if [ $grubyes = 0 ]; then
-		if [ $LPARTITION -eq 0 ]; then
-			choosepartition
-			if [ $LPARTITION -eq 0 ]; then
+	if [ $grubyes = $true ]; then
+		if [ $LDISK -eq 0 ]; then
+			choosedisk "grub"
+			if [ $LDISK -eq 0 ]; then
 				info $cancelinst
 				return 1
 			fi
 		fi
-	    chroot . /bin/bash -c "grub-install ${part/[0-9]/}"
-		chroot . /bin/bash -c "grub-mkconfig -o /boot/grub/grub.cfg"
+
+		if [ $LPARTITION -eq 0 ]; then
+			choosepartition "grub"
+			if [ $LDISK -eq 0 ]; then
+				info $cancelinst
+				return 1
+			fi
+		fi
+
+		sh_bind
+		mensagem "Aguarde, instalando o GRUB no disco: \n\n$sd"
+	    chroot . /bin/bash -c "grub-install $sd" > /dev/null 2>&1
+		chroot . /bin/bash -c "grub-mkconfig -o /boot/grub/grub.cfg" > /dev/null 2>&1
 	    alerta "*** GRUB *** " "$cgrubsuccess"
 	fi
 	#sh_umountpartition
-	sh_finish
+
+	if [ $STANDALONE = $fals ]; then
+		sh_finish
+	fi
 }
 
 function sh_fstab(){
@@ -684,6 +706,7 @@ function sh_check_install(){
 			menuinstall
 		fi
 	fi
+
 	if [ $LMOUNT -eq 0 ]; then
 		sh_mountpartition
 	fi
@@ -926,6 +949,11 @@ function choosedisk(){
 			scrmain
 			;;
 	esac
+
+	if [ $1 = "grub" ] ; then
+		LDISK=1
+		return 0
+	fi
 
 	if [ $sd <> 0 ]; then
  		typefmt=$(dialog \
