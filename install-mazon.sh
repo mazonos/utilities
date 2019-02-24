@@ -426,7 +426,6 @@ function sh_testsha256sum(){
 
 function sh_adduser(){
 
-	info "$cuser"
 	if [ "$cuser" != " " ]; then
 		sh_initbind
 		cinfo=`log_info_msg "Aguarde, criando usuario..."`
