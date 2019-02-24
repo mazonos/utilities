@@ -10,7 +10,6 @@
 #################################################################
 
 #. /lib/lsb/init-functions
-#. /chili/box
 
 # flag dialog exit status codes
 : ${D_OK=0}
@@ -108,9 +107,9 @@ declare -r dir_install="/mnt/mazon"
 declare -r site="mazonos.com"
 declare -r url_mazon="http://mazonos.com/releases/"
 declare -r tarball_min="mazon_minimal-0.2.tar.xz"
-declare -r sha256_min="mazon_minimal-0.2.sha256sum"
+declare -r sha256_min="mazon_minimal-0.2.tar.xz.sha256sum"
 declare -r tarball_full="mazon_beta-1.2.tar.xz"
-declare -r sha256_full="mazon_beta-1.2.sha256sum"
+declare -r sha256_full="mazon_beta-1.2.tar.xz.sha256sum"
 tarball_default=$tarball_full
 sha256_default=$sha256_full
 declare -r pwd=$PWD
