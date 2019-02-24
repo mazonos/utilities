@@ -1,4 +1,3 @@
-
 #!/bin/bash
 #
 ################################################################
@@ -435,15 +434,12 @@ function sh_exectar(){
 	local nret
   	cd $dir_install
 	which pv
-	if [ $? = 127 ]; then   # no which?
-	    tar xJpvf $pwd/$tarball_default -C $dir_install
-		nret=$?
-	elif [ $? = 1 ]; then
+	if [ $? <> $true ]; then
 	    tar xJpvf $pwd/$tarball_default -C $dir_install
 		nret=$?
 	else
 		(pv -n $pwd/$tarball_default								\
-		|tar xJpvf - -C $dir_install ) 2>&1 						\
+		|tar xJpf - -C $dir_install ) 2>&1 							\
 		|dialog	--backtitle "$ccabec" --gauge "Extracting files..." \
 		6 50
 	fi
