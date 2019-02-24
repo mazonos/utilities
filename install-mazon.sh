@@ -769,6 +769,7 @@ function menuinstall(){
 				# TROCAR POR /MNT *********************
 			XFCE4)
 				tarball_default=$tarball_full
+				sha256_default=$sha256_full
 				cmsgversion=$cmsg016
 				sh_wgetdefault
 				echo "ck-launch-session dbus-launch --exit-with-session startxfce4" > $dir_install/mnt/etc/skel/.xinitrc
@@ -777,6 +778,7 @@ function menuinstall(){
 
 			i3WM)
 				tarball_default=$tarball_full
+				sha256_default=$sha256_full
 				cmsgversion=$cmsg016
 				sh_wgetdefault
 				echo "ck-launch-session dbus-launch --exit-with-session i3" > $dir_install/etc/skel/.xinitrc
@@ -787,6 +789,7 @@ function menuinstall(){
 
 		minimal)
 			tarball_default=$tarball_min
+			sha256_default=$sha256_min
 			cmsgversion=$cmsg015
 			sh_wgetdefault
 			#sh_check_install
@@ -1098,10 +1101,12 @@ function dlmenu(){
 			esac
 		    case $dl in
 				1)	tarball_default=$tarball_full
+					sha256_default=$sha256_full
 					cmsgversion=$cmsg016
 					sh_wgetdefault
 					;;
 				2) 	tarball_default=$tarball_min
+					sha256_default=$sha256_min
 					cmsgversion=$cmsg015
 					sh_wgetdefault
 					;;
