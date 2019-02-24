@@ -9,9 +9,6 @@
 #      altered: 2019/02/17          licence: MIT      			#
 #################################################################
 
-#. /lib/lsb/init-functions
-. /chili/box
-
 # flag dialog exit status codes
 : ${D_OK=0}
 : ${D_CANCEL=1}
@@ -20,16 +17,6 @@
 : ${D_ITEM_HELP=4}
 : ${D_ESC=255}
 
-trancarstderr=2>&-
-true=0
-TRUE=0
-OK=0
-ok=0
-NOK=1
-nok=1
-FALSE=1
-false=1
-falso=1
 CANCEL=1
 ESC=255
 HEIGHT=0
@@ -40,82 +27,22 @@ WIDTH=0
 : ${LPARTITION=0}
 : ${LFORMAT=0}
 : ${LMOUNT=0}
-: ${TARSUCCESS=$false}
-: ${STANDALONE=$false}
-
-# usuario/senha/hostmame
-cuser=""
-cpass=""
-cshell="/bin/bash"
-chost="mazonos"
-#groups="audio,video,netdev"
-cgroups="audio,video"
-chome="/home"
-
-NORMAL="\\033[0;39m"         # Standard console grey
-SUCCESS="\\033[1;32m"        # Success is green
-WARNING="\\033[1;33m"        # Warnings are yellow
-FAILURE="\\033[1;31m"        # Failures are red
-INFO="\\033[1;36m"           # Information is light cyan
-BRACKET="\\033[1;34m"        # Brackets are blue
-
-# Use a colored prefix
-BMPREFIX="     "
-SUCCESS_PREFIX="${SUCCESS}  *  ${NORMAL}"
-FAILURE_PREFIX="${FAILURE}*****${NORMAL}"
-WARNING_PREFIX="${WARNING} *** ${NORMAL}"
-SKIP_PREFIX="${INFO}  S  ${NORMAL}"
-
-SUCCESS_SUFFIX="${BRACKET}[${SUCCESS}  OK  ${BRACKET}]${NORMAL}"
-FAILURE_SUFFIX="${BRACKET}[${FAILURE} FAIL ${BRACKET}]${NORMAL}"
-WARNING_SUFFIX="${BRACKET}[${WARNING} WARN ${BRACKET}]${NORMAL}"
-SKIP_SUFFIX="${BRACKET}[${INFO} SKIP ${BRACKET}]${NORMAL}"
-
-BOOTLOG=/run/bootlog
-KILLDELAY=3
-SCRIPT_STAT="0"
-
-# Set any user specified environment variables e.g. HEADLESS
-[ -r /etc/sysconfig/rc.site ]  && . /etc/sysconfig/rc.site
-
-## Screen Dimensions
-# Find current screen size
-if [ -z "${COLUMNS}" ]; then
-   COLUMNS=$(stty size)
-   COLUMNS=${COLUMNS##* }
-fi
-
-# When using remote connections, such as a serial port, stty size returns 0
-if [ "${COLUMNS}" = "0" ]; then
-   COLUMNS=80
-fi
-
-## Measurements for positioning result messages
-COL=$((${COLUMNS} - 8))
-WCOL=$((${COL} - 2))
-
-## Set Cursor Position Commands, used via echo
-SET_COL="\\033[${COL}G"      # at the $COL char
-SET_WCOL="\\033[${WCOL}G"    # at the $WCOL char
-CURS_UP="\\033[1A\\033[0G"   # Up one line, at the 0'th char
-CURS_ZERO="\\033[0G"
 
 # vars
-declare -i grafico=$true
 declare -i ok=0
+declare -i falso=1
 declare -r ccabec="MazonOS Linux installer v1.0"
 declare -r dir_install="/mnt/mazon"
-declare -r site="mazonos.com"
 declare -r url_mazon="http://mazonos.com/releases/"
 declare -r tarball_min="mazon_minimal-0.2.tar.xz"
 declare -r sha256_min="mazon_minimal-0.2.sha256sum"
 declare -r tarball_full="mazon_beta-1.2.tar.xz"
 declare -r sha256_full="mazon_beta-1.2.sha256sum"
 tarball_default=$tarball_full
-sha256_default=$sha256_full
+sh256_default=$sha256_full
 declare -r pwd=$PWD
 declare -r cfstab=$dir_install"/etc/fstab"
-declare -r wiki=$(cat << _WIKI
+declare -r wiki=$(cat << _EOF
 Wiki
 There are two ways to install, with the install-mazon.sh (dep dialog) script or the manual form as follows:
 
@@ -171,148 +98,9 @@ Add a password with:
 # exit
 
 Log in to the system with your new user and password, startx to start.
-_WIKI)
-
+_EOF)
 
 # lib functions script
-
-function timespec()
-{
-   STAMP="$(echo `date +"%b %d %T %:z"` `hostname`) "
-   return 0
-}
-
-function log_success_msg()
-{
-    /bin/echo -n -e "${BMPREFIX}${@}"
-    /bin/echo -e "${CURS_ZERO}${SUCCESS_PREFIX}${SET_COL}${SUCCESS_SUFFIX}"
-
-    # Strip non-printable characters from log file
-    logmessage=`echo "${@}" | sed 's/\\\033[^a-zA-Z]*.//g'`
-
-    timespec
-    /bin/echo -e "${STAMP} ${logmessage} OK" >> ${BOOTLOG}
-
-    return 0
-}
-
-function log_success_msg2()
-{
-    /bin/echo -n -e "${BMPREFIX}${@}"
-    /bin/echo -e "${CURS_ZERO}${SUCCESS_PREFIX}${SET_COL}${SUCCESS_SUFFIX}"
-
-    echo " OK" >> ${BOOTLOG}
-
-    return 0
-}
-
-function log_failure_msg()
-{
-    /bin/echo -n -e "${BMPREFIX}${@}"
-    /bin/echo -e "${CURS_ZERO}${FAILURE_PREFIX}${SET_COL}${FAILURE_SUFFIX}"
-
-    # Strip non-printable characters from log file
-
-    timespec
-    logmessage=`echo "${@}" | sed 's/\\\033[^a-zA-Z]*.//g'`
-    /bin/echo -e "${STAMP} ${logmessage} FAIL" >> ${BOOTLOG}
-
-    return 0
-}
-
-function log_failure_msg2()
-{
-    /bin/echo -n -e "${BMPREFIX}${@}"
-    /bin/echo -e "${CURS_ZERO}${FAILURE_PREFIX}${SET_COL}${FAILURE_SUFFIX}"
-
-    echo "FAIL" >> ${BOOTLOG}
-
-    return 0
-}
-
-function log_warning_msg()
-{
-    /bin/echo -n -e "${BMPREFIX}${@}"
-    /bin/echo -e "${CURS_ZERO}${WARNING_PREFIX}${SET_COL}${WARNING_SUFFIX}"
-
-    # Strip non-printable characters from log file
-    logmessage=`echo "${@}" | sed 's/\\\033[^a-zA-Z]*.//g'`
-    timespec
-    /bin/echo -e "${STAMP} ${logmessage} WARN" >> ${BOOTLOG}
-
-    return 0
-}
-
-function log_skip_msg()
-{
-    /bin/echo -n -e "${BMPREFIX}${@}"
-    /bin/echo -e "${CURS_ZERO}${SKIP_PREFIX}${SET_COL}${SKIP_SUFFIX}"
-
-    # Strip non-printable characters from log file
-    logmessage=`echo "${@}" | sed 's/\\\033[^a-zA-Z]*.//g'`
-    /bin/echo "SKIP" >> ${BOOTLOG}
-
-    return 0
-}
-
-function log_info_msg()
-{
-    /bin/echo -n -e "${BMPREFIX}${@}"
-
-    # Strip non-printable characters from log file
-    logmessage=`echo "${@}" | sed 's/\\\033[^a-zA-Z]*.//g'`
-    timespec
-    /bin/echo -n -e "${STAMP} ${logmessage}" >> ${BOOTLOG}
-
-    return 0
-}
-
-function log_info_msg2()
-{
-    /bin/echo -n -e "${@}"
-
-    # Strip non-printable characters from log file
-    logmessage=`echo "${@}" | sed 's/\\\033[^a-zA-Z]*.//g'`
-    /bin/echo -n -e "${logmessage}" >> ${BOOTLOG}
-
-    return 0
-}
-
-function evaluate_retval()
-{
-	local error_value="${?}"
-
-	if [ ${error_value} = 0 ]; then
-		log_success_msg2
-	else
-		log_failure_msg2
-   	fi
-	return ${error_value}
-}
-
-function is_true()
-{
-   [ "$1" = "1" ] || [ "$1" = "yes" ] || [ "$1" = "true" ] ||  [ "$1" = "y" ] ||
-   [ "$1" = "t" ]
-}
-
-
-function confirma(){
-    [ "$1" -ne 0 ] && { conf "INFO" "$2"; return $?;}
-}
-
-function msg(){
-    if [ $grafico = $true ]; then
-        dialog              \
-        --no-collapse       \
-        --title     "$1"    \
-        --infobox   "\n$2"  \
-        6 60
-    else
-        log_info_msg "$2"
-    fi
-
-}
 
 function mensagem(){
 	dialog								\
@@ -390,119 +178,29 @@ function quit(){
 
 # functions script
 
-function sh_adduser(){
-
-	info "$cuser"
-	if [ "$cuser" != " " ]; then
-		sh_initbind
-		cinfo=`log_info_msg "Aguarde, criando usuario..."`
-	    msg "INFO" "$cinfo"
-	    chroot . /bin/bash -c "useradd -m -G $cgroups $cuser -p $cpass > /dev/null 2>&1"
-	    chroot . /bin/bash -c "(echo $cuser:$cpass) | chpasswd > /dev/null 2>&1"
-	    evaluate_retval
-	fi
-}
-
-function sh_confadduser(){
-	# open fd
-	exec 3>&1
-	dialog 															\
-			--separate-widget	$'\n'								\
-			--cancel-label 		"Cancelar"							\
-			--backtitle 		"MazonOS Linux User Managment"		\
-			--title 			"Useradd" 							\
-			--form 				"Criar um novo usuário"				\
-	12 50 0 														\
-		"Username : " 1 1 "$cuser"        1 13 10 0 				\
-		"Password : " 2 1 "$cpass"        2 13 20 0 				\
-		"Hostname : " 3 1 "$chost"        3 13 20 0					\
-	2>&1 1>&3 | {
-		read -r cuser
-		read -r cpass
-		read -r chost
-
-		sh_adduser
-	}
-
-	# close fd
-	exec 3>&-
-
-}
-
-
 function sh_exectar(){
-	local nret
   	cd $dir_install
 	which pv
 	if [ $? = 127 ]; then   # no which?
 	    tar xJpvf $pwd/$tarball_default -C $dir_install
-		nret=$?
 	elif [ $? = 1 ]; then
 	    tar xJpvf $pwd/$tarball_default -C $dir_install
-		nret=$?
 	else
 		(pv -pteb $pwd/$tarball_default								\
 		|tar xJpvf - -C $dir_install ) 2>&1 						\
 		|dialog	--backtitle "$ccabec" --gauge "Extracting files..." \
 		6 50
 	fi
-	if [ $ret <> true ]; then
-	    alerta "*** TAR *** " "Erro na descompatacao do pacote"
-		TARSUCCESS=$false
-		return $TARSUCCESS
-	fi
-	TARSUCCESS=$true
-	return $TARSUCCESS
-}
-
-function sh_initbind(){
-	cd $dir_install
-	mkdir -p $dir_install/home
-	mkdir -p $dir_install/proc
-	mkdir -p $dir_install/sys
-	mkdir -p $dir_install/dev
-   	mount --type proc /proc proc/
-	mount --rbind /sys sys/
-    mount --rbind /dev dev/
-}
-
-
-function sh_bind(){
-	if [ $STANDALONE = $true ]; then
-		conf "*** BIND ***" "Iniciar BIND?"
-		bindyes=$?
-		if [ $bindyes = $false ]; then
-		    alerta "*** BIND *** " "$cancelbind"
-			STANDALONE = $false
-			return $STANDALONE
-		fi
-	fi
-	if [ $LPARTITION -eq 0 ]; then
-		choosepartition
-		if [ $LPARTITION -eq 0 ]; then
-			info $cancelinst
-			return 1
-		fi
-	fi
-	sh_initbind
-	if [ $STANDALONE = $true ]; then
-	    alerta "*** BIND *** " "BIND OK"
-		STANDALONE = $false
-	fi
 }
 
 function grubinstall(){
 	conf "*** GRUB ***" "$cGrubMsgInstall"
 	grubyes=$?
-
 	if [ $grubyes = 0 ]; then
-		if [ $LPARTITION -eq 0 ]; then
-			choosepartition
-			if [ $LPARTITION -eq 0 ]; then
-				info $cancelinst
-				return 1
-			fi
-		fi
+		cd $dir_install
+	   	mount --type proc /proc proc/
+		mount --rbind /sys sys/
+	    mount --rbind /dev dev/
 	    chroot . /bin/bash -c "grub-install ${part/[0-9]/}"
 		chroot . /bin/bash -c "grub-mkconfig -o /boot/grub/grub.cfg"
 	    alerta "*** GRUB *** " "$cgrubsuccess"
@@ -512,21 +210,6 @@ function grubinstall(){
 }
 
 function sh_fstab(){
-	if [ $STANDALONE = $true ]; then
-		conf "*** GRUB ***" "Alterar fstab?"
-		fstabyes=$?
-		if [ $fstabyes = $false ]; then
-			STANDALONE = $false
-			return $STANDALONE
-		fi
-	fi
-	if [ $LPARTITION -eq 0 ]; then
-		choosepartition
-		if [ $LPARTITION -eq 0 ]; then
-			info $cancelinst
-			return 1
-		fi
-	fi
 	mkdir -p $dir_install/etc >/dev/null
 	xuuid=$(blkid | grep $part | awk '{print $3}')
 	label="/            ext4     defaults            1     1"
@@ -534,7 +217,6 @@ function sh_fstab(){
 	sed -i 's|/dev/<xxx>|#'$part'|g' $cfstab
 	local result=$( cat $cfstab )
 	display_result "$result" "$cfstab"
-	STANDALONE = $false
 }
 
 function sh_finish(){
@@ -586,14 +268,10 @@ function sh_check_install(){
 #	fi
 	if [ $LPARTITION -eq 0 ]; then
 		choosepartition
-		if [ $LPARTITION -eq 0 ]; then
-			info $cancelinst
-			return 1
-		fi
 	fi
 	if [ $LFORMAT -eq 0 ]; then
 		sh_format
-		if [ $? = $false ]; then
+		if [ $? = 1 ]; then
 			LPARTITION=0
 			menuinstall
 		fi
@@ -602,7 +280,8 @@ function sh_check_install(){
 		sh_mountpartition
 	fi
 
-	confmulti "INSTALL" "\nDir Montagem : $dir_install" "\n    Partição : $part" "\n\nTudo pronto para iniciar a instalação. Confirma?"
+	confmulti "INSTALL" "\nDir Montagem : $dir_install" "\n    Partição : $part" "\n\nTudo pronto para iniciar a 
+instalação. Confirma?"
 	local nOk=$?
 	case $nOk in
 		$D_ESC)
@@ -614,28 +293,9 @@ function sh_check_install(){
 			menuinstall
 			;;
 	esac
-	sh_exectar
-	if [ $? = 1 ]; then
-		conf "*** ERRO ***" "Erro na descompactação do pacote. Deseja ainda prosseguir?"
-		local nOk1=$?
-		case $nOk1 in
-		$D_ESC)
-			info $cancelinst
-			menuinstall
-			;;
-		$D_CANCEL)
-			info $cancelinst
-			menuinstall
-			;;
-		esac
-	fi
-    sh_fstab
-	sh_initbind
 
-	conf "*** ADDUSER ***" "Deseja configurar usuario e senha agora?"
-	if [ $? = $true ]; then
-		sh_confadduser
-	fi
+	sh_exectar
+    sh_fstab
 	grubinstall
 }
 
@@ -781,7 +441,7 @@ function sh_checkdisk(){
 		nchoice=$?
 		if [ $nchoice = 0 ]; then
 			for i in $(seq 1 10); do
-				umount -f -rl $sd$i 2> /dev/null
+				umount -rl $sd$i 2> /dev/null
 			done
 		fi
 	fi
@@ -808,8 +468,8 @@ function sh_checkpartition(){
 	if [ "$cpart" <> " " ]; then
 		conf "** AVISO **" "\nA partição está montada.\n\n$cpart\n\nDesmontar?"
 		nchoice=$?
-		if [ $nchoice = $true ]; then
-			umount -f -rl $part 2> /dev/null
+		if [ $nchoice = 0 ]; then
+			umount -rl $part 2> /dev/null
 			LMOUNT=0
 		fi
 	fi
@@ -821,9 +481,7 @@ function choosedisk(){
 	################################################################
 	#disks=( $(fdisk -l | egrep -o '^/dev/sd[a-z]'| sed "s/$/ '*' /") )
 	LDISK=0
-	#disks=( $(fdisk -l | cut -dk -f2 | grep -o /sd[a-z]))
 	disks=($(ls /dev/sd* | grep -o '/dev/sd[a-z]' | cat | sort | uniq | sed "s/$/ '*' /"))
-
 	sd=$(dialog --clear 														\
 				--backtitle	 	"$ccabec"					 					\
 				--cancel-label 	"$buttonback"									\
@@ -872,7 +530,7 @@ function choosedisk(){
 					local nb=$?
 					case $nb in
 						$D_OK)
-							echo "label: dos" | echo ";" | sfdisk --force $sd >/dev/null
+							echo "label: dos" | echo ";" | echo "id=83" | sfdisk --force $sd >/dev/null
 							LDISK=1
 							local result=$( fdisk -l $sd )
 						    display_result "$result" "$csmg013"
@@ -933,7 +591,6 @@ function choosepartition(){
 	#partitions=( $(blkid | cut -d: -f1 | sed "s/$/ '*' /") )
 	#partitions=( $(ls $sd* | grep -o '/dev/sd[a-z][0-9]' | sed "s/$/ '*' /") )
 	LPARTITION=0
-	#partitions=( $(fdisk -l | cut -dk -f2 | grep -o /sd[a-z][0-9]))
 	partitions=( $(fdisk -l | sed -n /sd[a-z][0-9]/p | awk '{print $1,$5}'))
 	part=$(dialog 														\
 			--clear	 													\
@@ -1052,8 +709,7 @@ scrmain(){
 		        2 "$cmsg006"						  						\
 		        3 "$cmsg007"												\
 			   	4 "Install"	   					     						\
-			   	5 "Ferramentas/configuracoes"		     					\
-			   	6 "$cmsgquit"						     					)
+			   	5 "$cmsgquit"						     					)
 
 				exit_status=$?
 				case $exit_status in
@@ -1072,8 +728,7 @@ scrmain(){
 					2) choosedisk;;
 					3) choosepartition;;
 					4) menuinstall;;
-					5) sh_tools;;
-					6) scrend 0;;
+					5) scrend 0;;
 				esac
 	done
 }
@@ -1103,7 +758,6 @@ pt_BR(){
 	cmsg016='Você gostaria de baixar o MazonOS full?'
 	cmsg017='Download cancelado!'
 	cancelinst="Instalacao cancelada!"
-	cancelbind="Chroot cancelado!"
 	cmsgversion=$cmsg015
 	cmsg018="Baixar pacote full (X)"
 	cmsg019="Baixar pacote minimal"
@@ -1128,28 +782,6 @@ pt_BR(){
 	ci3wm="Desktop para caras avançados B)."
 	cmsgmin="Instalação mínima, sem X"
    	cmsgfull="Instalação completa. *8.2G de disco (Xfce4 ou i3wm)"
-	cwgeterro0="Sem problemas"
-	cwgeterro1="Erro genérico"
-	cwgeterro2="Erro de parse"
-	cwgeterro3="Erro de I/IO no arquivo"
-	cwgeterro4="Falha na rede"
-	cwgeterro5="Falha na verificação do certificado SSL"
-	cwgeterro6="Falha na autenticação (usuário ou senha)"
-	cwgeterro7="Erro de protocolo"
-	cwgeterro8="Servidor enviou uma respostar de erro"
-	cerrotar0="Sucesso"
-	cerrotar1="Árvore de diretório ruim, não conseguiu extrair um arquivo solicitado, \
-   			   \narquivo de entrada igual ao arquivo de saída, falha ao abrir o arquivo de entrada, \
-			   \nnão foi possível criar um  link, tabela link  malloc  falhouSucesso"
-	cerrotar2="Erro de internacionalização que nunca deveria ocorrer, erro de checksum"
-	cerrotar5="Erro de checksum"
-	cerrotar9="(EBADF) - Erro lendo /etc/default/tar, fim de volume mal colocado"
-	cerrotar12="(ENOMEM) – falha na alocação de memória para buffer"
-	cerrotar22="(EINVAL) – invocação ruim (erros de sintaxe do arqumento),\
-                \nparâmetros ruins para opções(ENOMEM) – falha na alocação de memória para buffer"
-	cerrotar28="(ENOSPC) – arquivo muito grande para um volume"
-	cerrotar78="(ENAMETOOLONG) - cwd name muito longo"
-	cerrotar171="(ETOAST) – unidade de fitas on fire"
 }
 
 en_US(){
@@ -1178,7 +810,6 @@ en_US(){
 	cmsgversion=$cmsg015
 	cmsg017='Download canceled!'
 	cancelinst="Installation canceled!"
-	cancelbind="Chroot canceled!"
 	cmsg018="Download full package (X)"
 	cmsg020="** NOTICE ** Will data will be lost!"
 	cmsg021="Format partition"
@@ -1201,28 +832,6 @@ en_US(){
 	ci3wm="Desktop for avanced guys B)."
 	cmsgmin="Minimum installation, not X"
    	cmsgfull="Complete installation. *8.2G disk (Xfce4 or i3wm)"
-	cwgeterro0="Sem problemas"
-	cwgeterro1="Erro genérico"
-	cwgeterro2="Erro de parse"
-	cwgeterro3="Erro de I/IO no arquivo"
-	cwgeterro4="Falha na rede"
-	cwgeterro5="Falha na verificação do certificado SSL"
-	cwgeterro6="Falha na autenticação (usuário ou senha)"
-	cwgeterro7="Erro de protocolo"
-	cwgeterro8="Servidor enviou uma respostar de erro"
-	cerrotar0="Sucesso"
-	cerrotar1="Árvore de diretório ruim, não conseguiu extrair um arquivo solicitado, \
-   			   \narquivo de entrada igual ao arquivo de saída, falha ao abrir o arquivo de entrada, \
-			   \nnão foi possível criar um  link, tabela link  malloc  falhouSucesso"
-	cerrotar2="Erro de internacionalização que nunca deveria ocorrer, erro de checksum"
-	cerrotar5="Erro de checksum"
-	cerrotar9="(EBADF) - Erro lendo /etc/default/tar, fim de volume mal colocado"
-	cerrotar12="(ENOMEM) – falha na alocação de memória para buffer"
-	cerrotar22="(EINVAL) – invocação ruim (erros de sintaxe do arqumento),\
-                \nparâmetros ruins para opções(ENOMEM) – falha na alocação de memória para buffer"
-	cerrotar28="(ENOSPC) – arquivo muito grande para um volume"
-	cerrotar78="(ENAMETOOLONG) - cwd name muito longo"
-	cerrotar171="(ETOAST) – unidade de fitas on fire"
 }
 
 function scrend(){
@@ -1284,46 +893,6 @@ function init(){
 	done
 }
 
-sh_tools(){
-	while true
-	do
-		tools=$(dialog 														\
-				--stdout                                                  	\
-				--backtitle 	"$ccabec"									\
-				--title 		"$cmsg001"						  			\
-				--cancel-label	"$buttonback"								\
-		        --menu 			"$cmsg003\n\n$cmsg004" 		 				\
-		        0 0 0                                 						\
-		        1 "Instalar Grub"											\
-		        2 "Alterar fstab"					  						\
-		        3 "Configurar chroot"										\
-		        4 "Configurar usuario e senha"								\
-			   	5 "$cmsgquit"						     					)
-
-				exit_status=$?
-				case $exit_status in
-					$ESC)
-						#scrend 1
-						#exit 1
-						scrmain
-						;;
-					$CANCEL)
-						#scrend 0
-						scrmain
-						;;
-				esac
-		        case $tools in
-					1) grubinstall;;
-					2) STANDALONE=$true; sh_fstab;;
-					3) STANDALONE=$true; sh_bind;;
-					4) STANDALONE=$true; sh_confadduser;;
-					5) scrend 0;;
-				esac
-	done
-}
-
-
-
 # Init - configuracao inicial
 clear
 init
@@ -1335,5 +904,3 @@ Passagem padrão original de Lorem Ipsum, usada desde o século XVI.
 Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
 Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
 LIXO
-
-
