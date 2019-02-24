@@ -634,6 +634,13 @@ function sh_wgetdefault(){
 		    	stdbuf -o0 awk '/[.] +[0-9][0-9]?[0-9]?%/ { print substr($0,63,3) }' | \
         		dialog --title "$plswait" --backtitle "$ccabec" --gauge $URL 7 70
 			;;
+
+			sh_testsha256sum
+			if [ $? = $false ]; then
+				info "\nOps, Pacote sem rota para o servidor da MazonOS!\nVerifique sua internet."
+				menuinstall
+			fi
+
 		$D_CANCEL)
 			info $cmsg017
 			menuinstall;;
