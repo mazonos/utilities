@@ -8,7 +8,7 @@
 #      created: 2019/02/15          licence: MIT      			#
 #      altered: 2019/02/17          licence: MIT      			#
 #################################################################
-. /chili/box
+#. /chili/box
 
 # flag dialog exit status codes
 : ${D_OK=0}
@@ -18,10 +18,16 @@
 : ${D_ITEM_HELP=4}
 : ${D_ESC=255}
 
+trancarstderr=2>&-
+true=0
 TRUE=0
 OK=0
+ok=0
 NOK=1
+nok=1
 FALSE=1
+false=1
+falso=1
 CANCEL=1
 ESC=255
 HEIGHT=0
@@ -32,10 +38,12 @@ WIDTH=0
 : ${LPARTITION=0}
 : ${LFORMAT=0}
 : ${LMOUNT=0}
+: ${TARSUCCESS=$false}
+: ${STANDALONE=$false}
 
 # vars
+declare -i grafico=$true
 declare -i ok=0
-declare -i falso=1
 declare -r ccabec="MazonOS Linux installer v1.0"
 declare -r dir_install="/mnt/mazon"
 declare -r site="mazonos.com"
@@ -185,41 +193,58 @@ function quit(){
 # functions script
 
 function sh_exectar(){
+	local nret
   	cd $dir_install
 	which pv
 	if [ $? = 127 ]; then   # no which?
 	    tar xJpvf $pwd/$tarball_default -C $dir_install
+		nret=$?
 	elif [ $? = 1 ]; then
 	    tar xJpvf $pwd/$tarball_default -C $dir_install
+		nret=$?
 	else
 		(pv -pteb $pwd/$tarball_default								\
 		|tar xJpvf - -C $dir_install ) 2>&1 						\
 		|dialog	--backtitle "$ccabec" --gauge "Extracting files..." \
 		6 50
 	fi
+	if [ $ret <> true ]; then
+	    alerta "*** TAR *** " "Erro na descompatacao do pacote"
+		TARSUCCESS=$false
+		return $TARSUCCESS
+	fi
+	TARSUCCESS=$true
+	return $TARSUCCESS
 }
 
 function sh_bind(){
-	conf "*** BIND ***" "Montar chroot?"
-	bindyes=$?
-
-	if [ $bindyes = 0 ]; then
-		if [ $LPARTITION -eq 0 ]; then
-			choosepartition
+	if [ $STANDALONE = $true ]; then
+		conf "*** BIND ***" "Iniciar chroot?"
+		bindyes=$?
+		if [ $bindyes = $false ]; then
+		    alerta "*** BIND *** " "$cancelbind"
+			STANDALONE = $false
+			return $STANDALONE
 		fi
-		cd $dir_install
-		mkdir -p $dir_install/proc
-		mkdir -p $dir_install/sys
-		mkdir -p $dir_install/dev
-	   	mount --type proc /proc proc/
-		mount --rbind /sys sys/
-	    mount --rbind /dev dev/
-	    #chroot . /bin/bash -c "grub-install ${part/[0-9]/}"
-		#chroot . /bin/bash -c "grub-mkconfig -o /boot/grub/grub.cfg"
-	    alerta "*** BIND *** " "CHROOT OK"
 	fi
-	#sh_umountpartition
-	#sh_finish
+	if [ $LPARTITION -eq 0 ]; then
+		choosepartition
+		if [ $LPARTITION -eq 0 ]; then
+			info $cancelinst
+			return 1
+		fi
+	fi
+	cd $dir_install
+	mkdir -p $dir_install/proc
+	mkdir -p $dir_install/sys
+	mkdir -p $dir_install/dev
+   	mount --type proc /proc proc/
+	mount --rbind /sys sys/
+    mount --rbind /dev dev/
+	if [ $STANDALONE = $true ]; then
+	    alerta "*** BIND *** " "CHROOT OK"
+		STANDALONE = $false
+	fi
 }
 
 function grubinstall(){
@@ -229,6 +254,10 @@ function grubinstall(){
 	if [ $grubyes = 0 ]; then
 		if [ $LPARTITION -eq 0 ]; then
 			choosepartition
+			if [ $LPARTITION -eq 0 ]; then
+				info $cancelinst
+				return 1
+			fi
 		fi
 		cd $dir_install
 		mkdir -p $dir_install/proc
@@ -240,14 +269,27 @@ function grubinstall(){
 	    chroot . /bin/bash -c "grub-install ${part/[0-9]/}"
 		chroot . /bin/bash -c "grub-mkconfig -o /boot/grub/grub.cfg"
 	    alerta "*** GRUB *** " "$cgrubsuccess"
+		sh_finish
 	fi
 	#sh_umountpartition
-	sh_finish
 }
 
 function sh_fstab(){
+	if [ $STANDALONE = $true ]; then
+		conf "*** GRUB ***" "Alterar fstab?"
+		fstabyes=$?
+		if [ $fstabyes = $false ]; then
+			info $cancelinst
+			STANDALONE = $false
+			return $STANDALONE
+		fi
+	fi
 	if [ $LPARTITION -eq 0 ]; then
 		choosepartition
+		if [ $LPARTITION -eq 0 ]; then
+			info $cancelinst
+			return 1
+		fi
 	fi
 	mkdir -p $dir_install/etc >/dev/null
 	xuuid=$(blkid | grep $part | awk '{print $3}')
@@ -256,6 +298,7 @@ function sh_fstab(){
 	sed -i 's|/dev/<xxx>|#'$part'|g' $cfstab
 	local result=$( cat $cfstab )
 	display_result "$result" "$cfstab"
+	STANDALONE = $false
 }
 
 function sh_finish(){
@@ -307,6 +350,10 @@ function sh_check_install(){
 #	fi
 	if [ $LPARTITION -eq 0 ]; then
 		choosepartition
+		if [ $LPARTITION -eq 0 ]; then
+			info $cancelinst
+			return 1
+		fi
 	fi
 	if [ $LFORMAT -eq 0 ]; then
 		sh_format
@@ -332,8 +379,21 @@ instalação. Confirma?"
 			menuinstall
 			;;
 	esac
-
 	sh_exectar
+	if [ $? = 1 ]; then
+		conf "*** ERRO ***", "Erro na descompactação do pacote. Deseja ainda prosseguir?"
+		local nOk1=$?
+		case $nOk1 in
+		$D_ESC)
+			info $cancelinst
+			menuinstall
+			;;
+		$D_CANCEL)
+			info $cancelinst
+			menuinstall
+			;;
+		esac
+	fi
     sh_fstab
 	grubinstall
 }
@@ -799,6 +859,7 @@ pt_BR(){
 	cmsg016='Você gostaria de baixar o MazonOS full?'
 	cmsg017='Download cancelado!'
 	cancelinst="Instalacao cancelada!"
+	cancelbind="Chroot cancelado!"
 	cmsgversion=$cmsg015
 	cmsg018="Baixar pacote full (X)"
 	cmsg019="Baixar pacote minimal"
@@ -823,6 +884,28 @@ pt_BR(){
 	ci3wm="Desktop para caras avançados B)."
 	cmsgmin="Instalação mínima, sem X"
    	cmsgfull="Instalação completa. *8.2G de disco (Xfce4 ou i3wm)"
+	cwgeterro0="Sem problemas"
+	cwgeterro1="Erro genérico"
+	cwgeterro2="Erro de parse"
+	cwgeterro3="Erro de I/IO no arquivo"
+	cwgeterro4="Falha na rede"
+	cwgeterro5="Falha na verificação do certificado SSL"
+	cwgeterro6="Falha na autenticação (usuário ou senha)"
+	cwgeterro7="Erro de protocolo"
+	cwgeterro8="Servidor enviou uma respostar de erro"
+	cerrotar0="Sucesso"
+	cerrotar1="Árvore de diretório ruim, não conseguiu extrair um arquivo solicitado, \
+   			   \narquivo de entrada igual ao arquivo de saída, falha ao abrir o arquivo de entrada, \
+			   \nnão foi possível criar um  link, tabela link  malloc  falhouSucesso"
+	cerrotar2="Erro de internacionalização que nunca deveria ocorrer, erro de checksum"
+	cerrotar5="Erro de checksum"
+	cerrotar9="(EBADF) - Erro lendo /etc/default/tar, fim de volume mal colocado"
+	cerrotar12="(ENOMEM) – falha na alocação de memória para buffer"
+	cerrotar22="(EINVAL) – invocação ruim (erros de sintaxe do arqumento),\
+                \nparâmetros ruins para opções(ENOMEM) – falha na alocação de memória para buffer"
+	cerrotar28="(ENOSPC) – arquivo muito grande para um volume"
+	cerrotar78="(ENAMETOOLONG) - cwd name muito longo"
+	cerrotar171="(ETOAST) – unidade de fitas on fire"
 }
 
 en_US(){
@@ -851,6 +934,7 @@ en_US(){
 	cmsgversion=$cmsg015
 	cmsg017='Download canceled!'
 	cancelinst="Installation canceled!"
+	cancelbind="Chroot canceled!"
 	cmsg018="Download full package (X)"
 	cmsg020="** NOTICE ** Will data will be lost!"
 	cmsg021="Format partition"
@@ -873,6 +957,28 @@ en_US(){
 	ci3wm="Desktop for avanced guys B)."
 	cmsgmin="Minimum installation, not X"
    	cmsgfull="Complete installation. *8.2G disk (Xfce4 or i3wm)"
+	cwgeterro0="Sem problemas"
+	cwgeterro1="Erro genérico"
+	cwgeterro2="Erro de parse"
+	cwgeterro3="Erro de I/IO no arquivo"
+	cwgeterro4="Falha na rede"
+	cwgeterro5="Falha na verificação do certificado SSL"
+	cwgeterro6="Falha na autenticação (usuário ou senha)"
+	cwgeterro7="Erro de protocolo"
+	cwgeterro8="Servidor enviou uma respostar de erro"
+	cerrotar0="Sucesso"
+	cerrotar1="Árvore de diretório ruim, não conseguiu extrair um arquivo solicitado, \
+   			   \narquivo de entrada igual ao arquivo de saída, falha ao abrir o arquivo de entrada, \
+			   \nnão foi possível criar um  link, tabela link  malloc  falhouSucesso"
+	cerrotar2="Erro de internacionalização que nunca deveria ocorrer, erro de checksum"
+	cerrotar5="Erro de checksum"
+	cerrotar9="(EBADF) - Erro lendo /etc/default/tar, fim de volume mal colocado"
+	cerrotar12="(ENOMEM) – falha na alocação de memória para buffer"
+	cerrotar22="(EINVAL) – invocação ruim (erros de sintaxe do arqumento),\
+                \nparâmetros ruins para opções(ENOMEM) – falha na alocação de memória para buffer"
+	cerrotar28="(ENOSPC) – arquivo muito grande para um volume"
+	cerrotar78="(ENAMETOOLONG) - cwd name muito longo"
+	cerrotar171="(ETOAST) – unidade de fitas on fire"
 }
 
 function scrend(){
@@ -964,9 +1070,9 @@ sh_tools(){
 				esac
 		        case $tools in
 					1) grubinstall;;
-					2) sh_fstab;;
+					2) STANDALONE=$true; sh_fstab;;
 					3) sh_adduser;;
-					4) sh_bind;;
+					4) STANDALONE=$true; sh_bind;;
 					5) scrend 0;;
 				esac
 	done
