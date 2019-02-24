@@ -820,7 +820,9 @@ function choosedisk(){
 	################################################################
 	#disks=( $(fdisk -l | egrep -o '^/dev/sd[a-z]'| sed "s/$/ '*' /") )
 	LDISK=0
+	#disks=( $(fdisk -l | cut -dk -f2 | grep -o /sd[a-z]))
 	disks=($(ls /dev/sd* | grep -o '/dev/sd[a-z]' | cat | sort | uniq | sed "s/$/ '*' /"))
+
 	sd=$(dialog --clear 														\
 				--backtitle	 	"$ccabec"					 					\
 				--cancel-label 	"$buttonback"									\
@@ -869,7 +871,7 @@ function choosedisk(){
 					local nb=$?
 					case $nb in
 						$D_OK)
-							echo "label: dos" | echo ";" | echo "id=83" | sfdisk --force $sd >/dev/null
+							echo "label: dos" | echo ";" | sfdisk --force $sd >/dev/null
 							LDISK=1
 							local result=$( fdisk -l $sd )
 						    display_result "$result" "$csmg013"
@@ -930,7 +932,8 @@ function choosepartition(){
 	#partitions=( $(blkid | cut -d: -f1 | sed "s/$/ '*' /") )
 	#partitions=( $(ls $sd* | grep -o '/dev/sd[a-z][0-9]' | sed "s/$/ '*' /") )
 	LPARTITION=0
-	partitions=( $(fdisk -l | sed -n /sd[a-z][0-9]/p | awk '{print $1,$5}'))
+	#partitions=( $(fdisk -l | sed -n /sd[a-z][0-9]/p | awk '{print $1,$5}'))
+	partitions=( $(fdisk -l | cut -dk -f2 | grep -o /sd[a-z][0-9]))
 	part=$(dialog 														\
 			--clear	 													\
 			--backtitle	 	"$ccabec"					 				\
