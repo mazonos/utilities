@@ -10,7 +10,7 @@
 #################################################################
 
 #. /lib/lsb/init-functions
-. /chili/box
+#. /chili/box
 
 # flag dialog exit status codes
 : ${D_OK=0}
@@ -171,7 +171,8 @@ Add a password with:
 # exit
 
 Log in to the system with your new user and password, startx to start.
-_WIKI)
+_WIKI
+)
 
 
 # lib functions script
@@ -398,6 +399,32 @@ function sh_testarota(){
     return $?
 }
 
+function sh_wgetsha256sum(){
+	clinksha=$url_mazon$sha256_default
+    ret=`log_info_msg "Aguarde, baixando sha256 novo..."`
+    msg "INFO" "$ret"
+    wget -q $clinksha > /dev/null 2>&1
+    evaluate_retval
+    return $?
+}
+
+function sh_delsha256sum(){
+    cinfo=`log_info_msg "Aguarde, excluindo sha256 antigo..."`
+    msg "INFO" "$info"
+    rm -f $sha256_default > /dev/null 2>&1
+    evaluate_retval
+    return $?
+}
+
+function sh_testsha256sum(){
+    cinfo=`log_info_msg "Aguarde, testando sha256sum"`
+    msg "INFO" "$cinfo"
+    #result=`sha256sum -c $sha256_default`
+    sha256sum -c $sha256_default > /dev/null 2>&1
+    evaluate_retval
+    return $?
+}
+
 function sh_adduser(){
 
 	info "$cuser"
@@ -549,11 +576,53 @@ function sh_finish(){
 function sh_wgetdefault(){
 	local URL=$url_mazon$tarball_default
 
-	sh_testarota
+	test -e $tarball_default
+	local nfound=$?
 
-	if [ $? = $false ]; then
-		info "\nOps, sem rota para o servidor da MazonOS!\nVerifique sua internet."
-		menuinstall
+	if [ $nfound = $true ]
+		clinksha=$url_mazon$sha256_default
+		test -e $clinksha
+		if [ $? = $true ]
+			sh_testsha256sum
+			if [ $? = $false ]; then
+				sh_testarota
+				if [ $? = $false ]; then
+					info "\nOps, sem rota para o servidor da MazonOS!\nVerifique sua internet."
+					menuinstall
+				fi
+				sh_delsha256sum
+				sh_wgetsha256sum
+				if [ $? = $false ]; then
+					info "\nOps, sem rota para o servidor da MazonOS!\nVerifique sua internet."
+					menuinstall
+				fi
+			fi
+		else
+			sh_testarota
+			if [ $? = $false ]; then
+				info "\nOps, sem rota para o servidor da MazonOS!\nVerifique sua internet."
+				menuinstall
+			fi
+
+			sh_delsha256sum
+			sh_wgetsha256sum
+			if [ $? = $false ]; then
+				info "\nOps, sem rota para o servidor da MazonOS!\nVerifique sua internet."
+				menuinstall
+			fi
+
+			sh_testsha256sum
+			if [ $? = $false ]; then
+				info "\nOps, Pacote sem rota para o servidor da MazonOS!\nVerifique sua internet."
+				menuinstall
+			fi
+		fi
+	else
+		sh_testarota
+		if [ $? = $false ]; then
+			info "\nOps, sem rota para o servidor da MazonOS!\nVerifique sua internet."
+			menuinstall
+		fi
 	fi
 
 	conf "$cmsg005" "\n$cmsgversion"
@@ -561,6 +630,7 @@ function sh_wgetdefault(){
 	case $nchoice in
 		$D_OK)
 			#wget -c $URL;;
+			sh_wgetsha256sum
 			wget -c $URL 2>&1 | \
 		    	stdbuf -o0 awk '/[.] +[0-9][0-9]?[0-9]?%/ { print substr($0,63,3) }' | \
         		dialog --title "$plswait" --backtitle "$ccabec" --gauge $URL 7 70
