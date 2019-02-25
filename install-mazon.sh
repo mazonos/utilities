@@ -407,6 +407,14 @@ function sh_wgetsha256sum(){
     return $?
 }
 
+function sh_deltarball(){
+    cinfo=`log_info_msg "Aguarde, excluindo tarball antigo..."`
+    msg "INFO" "$info"
+    rm -f $tarball_default > /dev/null 2>&1
+    evaluate_retval
+    return $?
+}
+
 function sh_delsha256sum(){
     cinfo=`log_info_msg "Aguarde, excluindo sha256 antigo..."`
     msg "INFO" "$info"
@@ -604,14 +612,25 @@ function sh_finish(){
 	exit
 }
 
+function sh_wgettarball(){
+	local URL=$url_mazon$tarball_default
+
+	wget -c $URL 2>&1 														\
+	| stdbuf -o0 awk '/[.] +[0-9][0-9]?[0-9]?%/ { print substr($0,63,3) }' 	\
+	| dialog --title "$plswait" --backtitle "$ccabec" --gauge "\n\n$URL" 9 70
+	return $?
+}
+
+
 function sh_wgetdefault(){
 	local URL=$url_mazon$tarball_default
+	clinksha=$url_mazon$sha256_default
+	sumtest=$false
 
 	test -e $tarball_default
 	local nfound=$?
 
 	if [ $nfound = $true ]; then
-		clinksha=$url_mazon$sha256_default
 		test -e $clinksha
 		if [ $? = $true ]; then
 			sh_testsha256sum
@@ -624,10 +643,11 @@ function sh_wgetdefault(){
 				sh_delsha256sum
 				sh_wgetsha256sum
 				if [ $? = $false ]; then
-					info "\nOps, sem rota para o servidor da MazonOS!\nVerifique sua internet."
+					info "\nOps, erro no download de $clinksha!\nVerifique sua internet."
 					menuinstall
 				fi
 			fi
+			sumtest=$true
 		else
 			sh_testarota
 			if [ $? = $false ]; then
@@ -638,15 +658,27 @@ function sh_wgetdefault(){
 			sh_delsha256sum
 			sh_wgetsha256sum
 			if [ $? = $false ]; then
-				info "\nOps, sem rota para o servidor da MazonOS!\nVerifique sua internet."
+				info "\nOps, erro no download de $clinksha!\nVerifique sua internet."
 				menuinstall
 			fi
 
 			sh_testsha256sum
 			if [ $? = $false ]; then
-				info "\nOps, Pacote sem rota para o servidor da MazonOS!\nVerifique sua internet."
-				menuinstall
+				conf "*** SHA256 ***" "\nOps, Pacote corrompido. Baixar novamente o pacote?"
+				if [ $? = $false ]; then
+					menuinstall
+				else
+					sh_deltarball
+					sh_wgettarball
+					sh_wgetsha256sum
+					sh_testsha256sum
+					if [ $? = $false ]; then
+						info "\nOps, Pacote corrompido. Favor repetir a operação!"
+						menuinstall
+					fi
+				fi
 			fi
+			sumtest=$true
 		fi
 	else
 		sh_testarota
@@ -656,27 +688,27 @@ function sh_wgetdefault(){
 		fi
 	fi
 
-	conf "$cmsg005" "\n$cmsgversion"
-	local nchoice=$?
-	case $nchoice in
-		$D_OK)
-			#wget -c $URL;;
-			sh_wgetsha256sum
-			wget -c $URL 2>&1 | \
-		    	stdbuf -o0 awk '/[.] +[0-9][0-9]?[0-9]?%/ { print substr($0,63,3) }' | \
-        		dialog --title "$plswait" --backtitle "$ccabec" --gauge $URL 7 70
+	if [ $sumtest = $false ]; then
+		conf "$cmsg005" "\n$cmsgversion" # Você gostaria de baixar o MazonOS minimal?'
+		local nchoice=$?
+		case $nchoice in
+			$D_OK)
+				#wget -c $URL;;
+				sh_delsha256sum
+				sh_wgetsha256sum
+				sh_wgettarball
+				sh_testsha256sum
+				if [ $? = $false ]; then
+					info "\nOps, Pacote corrompido. Favor repetir a operação!"
+					menuinstall
+				fi
+				;;
 
-			sh_testsha256sum
-			if [ $? = $false ]; then
-				info "\nOps, Pacote corrompido."
-				menuinstall
-			fi
-			;;
-
-		$D_CANCEL)
-			info $cmsg017
-			menuinstall;;
-	esac
+			$D_CANCEL)
+				info $cmsg017
+				menuinstall;;
+		esac
+	fi
 
 	mazon=$(ls | grep $tarball_default)
 	if [$?='1']; then
