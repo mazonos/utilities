@@ -865,10 +865,10 @@ function menuinstall(){
 	do
     	resposta=$( dialog												\
 		--stdout														\
-        --title 		' *** INSTALL CONFIGURATION *** '				\
+        --title 		"$cpackagedisp"									\
 		--backtitle 	"$ccabec"										\
 		--cancel-label	"$buttonback"									\
-		--menu			"$cmsg004"										\
+		--menu			"\n$cmsg004"									\
 		0 70 0															\
 	   	full			"$cmsgfull"										\
 		minimal			"$cmsgmin"										)
@@ -1046,10 +1046,10 @@ function choosedisk(){
 	#disks=( $(fdisk -l | cut -dk -f2 | grep -o /sd[a-z]))
 	disks=($(ls /dev/sd* | grep -o '/dev/sd[a-z]' | cat | sort | uniq | sed "s/$/ '*' /"))
 	LDISK=0
-	sd=$(dialog --clear 														\
-				--title 		"DISK"								  			\
-				--backtitle	 	"$ccabec"					 					\
-				--cancel-label 	"$buttonback"									\
+	sd=$(dialog --clear 															\
+				--title 		"$cdisco"							  				\
+				--backtitle	 	"$ccabec"					 						\
+				--cancel-label 	"$buttonback"										\
 				--menu 			"\n$cmsg009" 0 50 0 "${disks[@]}" 2>&1 >/dev/tty 	)
 
 	exit_status=$?
@@ -1165,7 +1165,7 @@ function choosepartition(){
 	partitions=( $(fdisk -l | sed -n /sd[a-z][0-9]/p | awk '{print $1,$5}'))
 	part=$(dialog 														\
 			--clear	 													\
-			--title 		"PARTITION"						  			\
+			--title 		"$cparticao"					  			\
 			--backtitle	 	"$ccabec"					 				\
 			--cancel-label	"$buttonback"								\
 			--menu 			"\n$cmsg007:"								\
@@ -1421,6 +1421,8 @@ pt_BR(){
 	cmsg_enter_work_dir="Aguarde, Entrando no diretorio de trabalho."
 	cmsg_mkfs_ok="Formatacao terminada com sucesso."
 	cmsg_mkfs_error="Erro na Formatacao."
+	cdisco="DISCO"
+	cparticao="PARTIÇÃO"
 }
 
 en_US(){
@@ -1536,6 +1538,8 @@ en_US(){
 	cmsg_enter_work_dir="Please wait, entering the work directory."
 	cmsg_mkfs_ok="Formation completed successfully."
 	cmsg_mkfs_error="Formatting error."
+	cdisco="DISK"
+	cparticao="PARTITION"
 }
 
 function scrend(){
