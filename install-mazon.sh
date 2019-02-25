@@ -398,7 +398,16 @@ function sh_testarota(){
     return $?
 }
 
+function sh_delsha256sum(){
+    cinfo=`log_info_msg "Aguarde, excluindo sha256 antigo..."`
+    msg "INFO" "$info"
+    rm -f $sha256_default > /dev/null 2>&1
+    evaluate_retval
+    return $?
+}
+
 function sh_wgetsha256sum(){
+	sh_delsha256sum
 	clinksha=$url_mazon$sha256_default
     ret=`log_info_msg "Aguarde, baixando sha256 novo..."`
     msg "INFO" "$ret"
@@ -411,14 +420,6 @@ function sh_deltarball(){
     cinfo=`log_info_msg "Aguarde, excluindo tarball antigo..."`
     msg "INFO" "$info"
     rm -f $tarball_default > /dev/null 2>&1
-    evaluate_retval
-    return $?
-}
-
-function sh_delsha256sum(){
-    cinfo=`log_info_msg "Aguarde, excluindo sha256 antigo..."`
-    msg "INFO" "$info"
-    rm -f $sha256_default > /dev/null 2>&1
     evaluate_retval
     return $?
 }
@@ -640,7 +641,6 @@ function sh_wgetdefault(){
 					info "\nOps, sem rota para o servidor da MazonOS!\nVerifique sua internet."
 					menuinstall
 				fi
-				sh_delsha256sum
 				sh_wgetsha256sum
 				if [ $? = $false ]; then
 					info "\nOps, erro no download de $clinksha!\nVerifique sua internet."
@@ -655,7 +655,6 @@ function sh_wgetdefault(){
 				menuinstall
 			fi
 
-			sh_delsha256sum
 			sh_wgetsha256sum
 			if [ $? = $false ]; then
 				info "\nOps, erro no download de $clinksha!\nVerifique sua internet."
@@ -694,13 +693,23 @@ function sh_wgetdefault(){
 		case $nchoice in
 			$D_OK)
 				#wget -c $URL;;
-				sh_delsha256sum
 				sh_wgetsha256sum
 				sh_wgettarball
 				sh_testsha256sum
 				if [ $? = $false ]; then
-					info "\nOps, Pacote corrompido. Favor repetir a operação!"
-					menuinstall
+					conf "*** SHA256 ***" "\nOps, Pacote corrompido. Baixar novamente o pacote?"
+					if [ $? = $false ]; then
+						menuinstall
+					else
+						sh_deltarball
+						sh_wgettarball
+						sh_wgetsha256sum
+						sh_testsha256sum
+						if [ $? = $false ]; then
+							info "\nOps, Pacote corrompido. Favor repetir a operação!"
+							menuinstall
+						fi
+					fi
 				fi
 				;;
 
