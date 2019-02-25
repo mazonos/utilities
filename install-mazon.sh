@@ -455,10 +455,10 @@ function sh_confadduser(){
 	exec 3>&1
 	dialog 															\
 			--separate-widget	$'\n'								\
-			--cancel-label 		"Cancelar"							\
+			--cancel-label 		"$buttonback"						\
 			--backtitle 		"MazonOS Linux User Managment"		\
-			--title 			"Useradd" 							\
-			--form 				"Criar um novo usuário"				\
+			--title 			"USERADD" 							\
+			--form 				"$ccreatenewuser"					\
 	12 50 0 														\
 		"Username : " 1 1 "$cuser"        1 13 10 0 				\
 		"Password : " 2 1 "$cpass"        2 13 20 0 				\
@@ -512,7 +512,7 @@ function sh_initbind(){
 
 function sh_bind(){
 	if [ $STANDALONE = $true ]; then
-		conf "*** BIND ***" "Iniciar BIND?"
+		conf "*** BIND ***" "\n$cinitbind?"
 		bindyes=$?
 		if [ $bindyes = $false ]; then
 		    alerta "*** BIND *** " "$cancelbind"
@@ -550,7 +550,7 @@ function grubinstall(){
 		if [ $LDISK -eq 0 ]; then
 			choosedisk "grub"
 			if [ $LDISK -eq 0 ]; then
-				info $cancelinst
+				info "\n$ccancelgrub"
 				return 1
 			fi
 		fi
@@ -558,7 +558,7 @@ function grubinstall(){
 		if [ $LPARTITION -eq 0 ]; then
 			choosepartition "grub"
 			if [ $LDISK -eq 0 ]; then
-				info $cancelinst
+				info "\n$ccancelgrub"
 				return 1
 			fi
 		fi
@@ -568,17 +568,19 @@ function grubinstall(){
 	    chroot . /bin/bash -c "grub-install $sd" > /dev/null 2>&1
 		chroot . /bin/bash -c "grub-mkconfig -o /boot/grub/grub.cfg" > /dev/null 2>&1
 	    alerta "*** GRUB *** " "$cgrubsuccess"
+	else
+		info "\n$ccancelgrub"
 	fi
-	#sh_umountpartition
 
 	if [ $STANDALONE = $false ]; then
 		sh_finish
 	fi
+	#sh_umountpartition
 }
 
 function sh_fstab(){
 	if [ $STANDALONE = $true ]; then
-		conf "*** GRUB ***" "Alterar fstab?"
+		conf "*** FSTAB ***" "\n$cfstabinst?"
 		fstabyes=$?
 		if [ $fstabyes = $false ]; then
 			STANDALONE=$false
@@ -793,7 +795,7 @@ function sh_check_install(){
     sh_fstab
 	sh_initbind
 
-	conf "*** ADDUSER ***" "Deseja configurar usuario e senha agora?"
+	conf "*** ADDUSER ***" "\n$cconfusernow?"
 	if [ $? = $true ]; then
 		sh_confadduser
 	fi
@@ -1209,22 +1211,20 @@ function dlmenu(){
 scrmain(){
 	while true
 	do
-		clear
-		# primeira tela // hello
-		##########################
 		sd=$(ls /dev/sd*)
 		main=$(dialog 														\
+				--clear                                                  	\
 				--stdout                                                  	\
 				--backtitle 	"$ccabec"									\
 				--title 		"$cmsg001"						  			\
 				--cancel-label	"$buttonback"								\
-		        --menu 			"$cmsg003\n\n$cmsg004" 		 				\
+		        --menu 			"\n\n$cmsg004" 	 							\
 		        0 0 0                                 						\
 		        1 "$cmsg005"  												\
 		        2 "$cmsg006"						  						\
 		        3 "$cmsg007"												\
 			   	4 "Install"	   					     						\
-			   	5 "Ferramentas/configuracoes"		     					)
+			   	5 "$ctools"							     					)
 
 				exit_status=$?
 				case $exit_status in
@@ -1290,6 +1290,13 @@ pt_BR(){
     plswait="Por favor aguarde, baixando pacote..."
 	cfinish="Instalação completa! Boas vibes.\nReboot para iniciar com MazonOS Linux. \n\nEnviar bugs root@mazonos.com"
 	cgrubsuccess="OK! GRUB instalado com sucesso!"
+	ccancelgrub="Instalação do GRUB cancelada!"
+	cgrubinst="Instalar GRUB"
+	cfstabinst="Alterar FSTAB"
+	cinitbind="Iniciar BIND"
+	cconfuser="Configurar usuario e senha"
+	cconfusernow="Configurar usuário e senha agora"
+	ccreatenewuser="Criar um novo usuário"
 	cGrubMsgInstall="Você gostaria de instalar o GRUB? \
 					\n\n*Lembrando que ainda não temos suporte a dual boot. \
 					\nSe precisar de dual boot, use o grub de outra distribuição com:\n# update-grub"
@@ -1320,6 +1327,7 @@ pt_BR(){
 	cerrotar28="(ENOSPC) – arquivo muito grande para um volume"
 	cerrotar78="(ENAMETOOLONG) - cwd name muito longo"
 	cerrotar171="(ETOAST) – unidade de fitas on fire"
+	ctools="Ferramentas/Configurações"
 }
 
 en_US(){
@@ -1362,7 +1370,14 @@ en_US(){
 	cdlok4="\n\nStart the installation now?"
     plswait="Please wait, Downloading package..."
 	cfinish="Install Complete! Good vibes. \nReboot to start with MazonOS Linux. \n\nSend bugs - root@mazonos.com"
-	cgrubsucess="OK! GRUB successfully installed!"
+	cgrubsuccess="OK! GRUB successfully installed!"
+	ccancelgrub="Installing grub canceled!"
+	cgrubinst="Install GRUB"
+	cfstabinst="Change FSTAB"
+	cinitbind="Start BIND"
+	cconfuser="Configure user and password"
+	cconfusernow="Configure user and password now"
+	ccreatenewuser="Create a new user"
 	cGrubMsgInstall="Would you like to install grub? \
 					\n\n*Remembering that we do not yet have dual boot support. \
 					\nIf use dualboot, use the grub from its other distribution with:\n# update-grub"
@@ -1393,6 +1408,7 @@ en_US(){
 	cerrotar28="(ENOSPC) – arquivo muito grande para um volume"
 	cerrotar78="(ENAMETOOLONG) - cwd name muito longo"
 	cerrotar171="(ETOAST) – unidade de fitas on fire"
+	ctools="Tools/Settings"
 }
 
 function scrend(){
@@ -1431,9 +1447,9 @@ function init(){
 			--clear														\
 			--stdout                                                  	\
 			--backtitle	 	"MazonOS Linux installer v1.0"				\
-			--title 		'Bem-vindo ao MazonOS install v1.0'			\
-			--cancel-label	"Encerrar" 									\
-	        --menu			'\nEscolha o idioma do instalador:\n'		\
+			--title 		'Welcome to the MazonOS installer'			\
+			--cancel-label	"Exit"	 									\
+	        --menu			'\nChoose the language of the installer:'	\
 	        0 80 0                                 						\
 	        1 'Português'						 						\
 	       	2 'English'							  						\
@@ -1475,10 +1491,10 @@ sh_tools(){
 				--cancel-label	"$buttonback"								\
 		        --menu 			"$cmsg003\n\n$cmsg004" 		 				\
 		        0 0 0                                 						\
-		        1 "Instalar Grub"											\
-		        2 "Alterar fstab"					  						\
-		        3 "Configurar chroot"										\
-		        4 "Configurar usuario e senha"								)
+		        1 "$cgrubinst"												\
+		        2 "$cfstabinst"						  						\
+		        3 "$cinitbind"												\
+		        4 "$cconfuser"												)
 
 				exit_status=$?
 				case $exit_status in
@@ -1493,7 +1509,7 @@ sh_tools(){
 						;;
 				esac
 		        case $tools in
-					1) grubinstall;;
+					1) STANDALONE=$true; grubinstall;;
 					2) STANDALONE=$true; sh_fstab;;
 					3) STANDALONE=$true; sh_bind;;
 					4) STANDALONE=$true; sh_confadduser;;
