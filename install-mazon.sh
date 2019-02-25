@@ -109,7 +109,7 @@ declare -r tarball_min="mazon_minimal-0.3.tar.xz"
 declare -r sha256_min="mazon_minimal-0.3.tar.xz.sha256sum"
 declare -r tarball_full="mazon_beta-1.2.tar.xz"
 declare -r sha256_full="mazon_beta-1.2.tar.xz.sha256sum"
-fullinst=$true
+FULLINST=$true
 tarball_default=$tarball_full
 sha256_default=$sha256_full
 declare -r pwd=$PWD
@@ -390,6 +390,48 @@ function quit(){
 
 # functions script
 
+function sh_choosepackage(){
+    pkt=($(cat index.html \
+        | grep .xz.sha256sum \
+        | awk '{print $2}' \
+        | sed 's/<a href=\"//g' \
+        | cut -d'"' -f3 | sed 's/>//g' \
+        | sed 's/<\/a//g' \
+        | sed 's/.sha256sum//g'))
+
+    if echo "${pkt[0]}" | grep 'minimal' >/dev/null
+    then
+		tarball_min="${pkt[0]}"
+		sha256_min="${pkt[0]}.sha256sum"
+		tarball_full="${pkt[1]}"
+		sha256_full="${pkt[1]}.sha256sum"
+    else
+		tarball_min="${pkt[1]}"
+		sha256_min="${pkt[1]}.sha256sum"
+		tarball_full="${pkt[0]}"
+		sha256_full="${pkt[0]}.sha256sum"
+    fi
+	return 0
+}
+
+
+function sh_delpackageindex(){
+    ret=`log_info_msg "Aguarde, excluindo indice antigo..."`
+    msg "INFO" "$ret"
+    rm index.html* > /dev/null 2>&1
+    evaluate_retval
+    return $?
+
+}
+
+function sh_wgetpackageindex(){
+    ret=`log_info_msg "Aguarde, baixando indice de pacotes..."`
+    msg "INFO" "$ret"
+    wget $url_mazon > /dev/null 2>&1
+    evaluate_retval
+    return $?
+}
+
 function sh_testarota(){
     cinfo=`log_info_msg "$cmsgtestarota"`
     msg "INFO" "$cinfo"
@@ -437,7 +479,7 @@ function sh_adduser(){
 
 	if [ "$cuser" != " " ]; then
 
-		if [ $fullinst = $false ]; then
+		if [ $FULLINST = $false ]; then
 			cgroups="audio,video"
 		fi
 
@@ -626,9 +668,25 @@ function sh_wgettarball(){
 
 
 function sh_wgetdefault(){
+	sh_testarota
+	if [ $? = $false ]; then
+		info "\nOps, sem rota para o servidor da MazonOS!\nVerifique sua internet."
+		menuinstall
+	fi
+	sh_delpackageindex
+	sh_wgetpackageindex
+
+	if [ $FULLINST = $true ]; then
+		tarball_default=$tarball_full
+		sha256_default=$sha256_full
+	else
+		tarball_default=$tarball_min
+		sha256_default=$sha256_min
+	fi
+
 	local URL=$url_mazon$tarball_default
-	clinksha=$url_mazon$sha256_default
-	sumtest=$false
+	local clinksha=$url_mazon$sha256_default
+	local sumtest=$false
 
 	test -e $tarball_default
 	local nfound=$?
@@ -851,9 +909,9 @@ function menuinstall(){
 			case "$resfull" in
 				# TROCAR POR /MNT *********************
 			XFCE4)
-				fullinst=$true
-				tarball_default=$tarball_full
-				sha256_default=$sha256_full
+				FULLINST=$true
+				#tarball_default=$tarball_full
+				#sha256_default=$sha256_full
 				cmsgversion=$cmsg016
 				sh_wgetdefault
 				echo "ck-launch-session dbus-launch --exit-with-session startxfce4" > $dir_install/mnt/etc/skel/.xinitrc
@@ -861,9 +919,9 @@ function menuinstall(){
 				;;
 
 			i3WM)
-				fullinst=$true
-				tarball_default=$tarball_full
-				sha256_default=$sha256_full
+				FULLINST=$true
+				#tarball_default=$tarball_full
+				#sha256_default=$sha256_full
 				cmsgversion=$cmsg016
 				sh_wgetdefault
 				echo "ck-launch-session dbus-launch --exit-with-session i3" > $dir_install/etc/skel/.xinitrc
@@ -873,9 +931,9 @@ function menuinstall(){
 			;;
 
 		minimal)
-			fullinst=$false
-			tarball_default=$tarball_min
-			sha256_default=$sha256_min
+			FULLINST=$false
+			#tarball_default=$tarball_min
+			#sha256_default=$sha256_min
 			cmsgversion=$cmsg015
 			sh_wgetdefault
 			#sh_check_install
@@ -1193,16 +1251,16 @@ function dlmenu(){
 					;;
 			esac
 		    case $dl in
-				1)	tarball_default=$tarball_full
-					sha256_default=$sha256_full
+				1)	FULLINST=$true
+					#tarball_default=$tarball_full
+					#sha256_default=$sha256_full
 					cmsgversion=$cmsg016
-					fullinst=$true
 					sh_wgetdefault
 					;;
-				2) 	tarball_default=$tarball_min
-					sha256_default=$sha256_min
+				2) 	FULLINST=$false
+					#tarball_default=$tarball_min
+					#sha256_default=$sha256_min
 					cmsgversion=$cmsg015
-					fullinst=$false
 					sh_wgetdefault
 					;;
 				3) 	clear; exit;;
