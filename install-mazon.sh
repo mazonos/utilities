@@ -1570,6 +1570,14 @@ function init(){
 }
 
 function sh_packagedisp(){
+	sh_testarota
+	if [ $? = $false ]; then
+		info "\n$cmsgnoroute"
+		menuinstall
+	fi
+	sh_delpackageindex
+	sh_wgetpackageindex
+
     pkt=($(cat index.html \
         | grep .xz \
         | awk '{print $2, $5}' \
