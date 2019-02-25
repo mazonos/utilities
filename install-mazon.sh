@@ -700,9 +700,9 @@ function sh_wgetdefault(){
 }
 
 function sh_check_install(){
-#	if [ $LDISK -eq 0 ]; then
-#		choosedisk
-#	fi
+	if [ $LDISK -eq 0 ]; then
+		choosedisk
+	fi
 	if [ $LPARTITION -eq 0 ]; then
 		choosepartition
 		if [ $LPARTITION -eq 0 ]; then
