@@ -1391,6 +1391,7 @@ pt_BR(){
 	cmsgtestarota="Aguarde, testando rota para o servidor MazonOS..."
 	cmsgdelsha256="Aguarde, excluindo SHA256SUM antigo..."
 	cmsgusermanager="Gerenciamento de usuários MazonOS Linux"
+	cpackagedisp="Pacotes disponiveis"
 }
 
 en_US(){
@@ -1475,6 +1476,7 @@ en_US(){
 	cmsgtestarota="Please wait, testing route to the MazonOS server..."
 	cmsgdelsha256="Please wait, deleting old SHA256SUM..."
 	cmsgusermanager="MazonOS Linux user management"
+	cpackagedisp="Available packages"
 }
 
 function scrend(){
@@ -1548,6 +1550,37 @@ function init(){
 	done
 }
 
+function sh_packagedisp(){
+    pkt=($(cat index.html \
+        | grep .xz \
+        | awk '{print $2, $5}' \
+        | sed 's/<a href=\"//g' \
+        | cut -d'"' -f3 | sed 's/>//g' \
+        | sed 's/<\/a//g' ))
+
+     sd=$(dialog --clear                                        \
+                 --backtitle     "$ccabec"                      \
+                 --title         "$ccabec"                      \
+                 --cancel-label  "Voltar"                       \
+                 --menu          "\n$cpackagedisp:"				\
+			     0 50 0											\
+                "${pkt[@]}" 2>&1 >/dev/tty						)
+
+     exit_status=$?
+     case $exit_status in
+         $ESC)
+             #scrend 1
+             #exit 1
+             #scrmain
+             ;;
+         $CANCEL)
+             #scrend 0
+             #scrmain
+            ;;
+     esac
+}
+
+
 sh_tools(){
 	while true
 	do
@@ -1561,7 +1594,8 @@ sh_tools(){
 		        1 "$cgrubinst"												\
 		        2 "$cfstabinst"						  						\
 		        3 "$cinitbind"												\
-		        4 "$cconfuser"												)
+		        4 "$cconfuser"												\
+		        5 "$cpackagedisp"											)
 
 				exit_status=$?
 				case $exit_status in
@@ -1580,6 +1614,7 @@ sh_tools(){
 					2) STANDALONE=$true; sh_fstab;;
 					3) STANDALONE=$true; sh_bind;;
 					4) STANDALONE=$true; sh_confadduser;;
+					5) sh_packagedisp;;
 				esac
 	done
 }
