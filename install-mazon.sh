@@ -391,7 +391,7 @@ function quit(){
 # functions script
 
 function sh_testarota(){
-    cinfo=`log_info_msg "Aguarde, testando rota para o servidor MazonOS..."`
+    cinfo=`log_info_msg "$cmsgtestarota"`
     msg "INFO" "$cinfo"
     ping -c 2 $site > /dev/null 2>&1
     evaluate_retval
@@ -399,8 +399,8 @@ function sh_testarota(){
 }
 
 function sh_delsha256sum(){
-    cinfo=`log_info_msg "Aguarde, excluindo sha256 antigo..."`
-    msg "INFO" "$info"
+    cinfo=`log_info_msg "$cmsgdelsha256"`
+	msg "INFO" "$info"
     rm -f $sha256_default > /dev/null 2>&1
     evaluate_retval
     return $?
@@ -456,7 +456,7 @@ function sh_confadduser(){
 	dialog 															\
 			--separate-widget	$'\n'								\
 			--cancel-label 		"$buttonback"						\
-			--backtitle 		"MazonOS Linux User Managment"		\
+			--backtitle 		"$cmsgusermanager"					\
 			--title 			"USERADD" 							\
 			--form 				"$ccreatenewuser"					\
 	12 50 0 														\
@@ -990,9 +990,10 @@ function choosedisk(){
 	disks=($(ls /dev/sd* | grep -o '/dev/sd[a-z]' | cat | sort | uniq | sed "s/$/ '*' /"))
 
 	sd=$(dialog --clear 														\
+				--title 		"DISK"								  			\
 				--backtitle	 	"$ccabec"					 					\
 				--cancel-label 	"$buttonback"									\
-				--menu 			"$cmsg009" 0 50 0 "${disks[@]}" 2>&1 >/dev/tty 	)
+				--menu 			"\n$cmsg009" 0 50 0 "${disks[@]}" 2>&1 >/dev/tty 	)
 
 	exit_status=$?
 	case $exit_status in
@@ -1107,9 +1108,10 @@ function choosepartition(){
 	partitions=( $(fdisk -l | sed -n /sd[a-z][0-9]/p | awk '{print $1,$5}'))
 	part=$(dialog 														\
 			--clear	 													\
+			--title 		"PARTITION"						  			\
 			--backtitle	 	"$ccabec"					 				\
 			--cancel-label	"$buttonback"								\
-			--menu 			'Choose partition for installation mazonOS:' \
+			--menu 			"\n$cmsg007:"								\
 			0 50 0 														\
 			"${partitions[@]}" 2>&1 >/dev/tty 							)
 
@@ -1328,6 +1330,9 @@ pt_BR(){
 	cerrotar78="(ENAMETOOLONG) - cwd name muito longo"
 	cerrotar171="(ETOAST) – unidade de fitas on fire"
 	ctools="Ferramentas/Configurações"
+	cmsgtestarota="Aguarde, testando rota para o servidor MazonOS..."
+	cmsgdelsha256="Aguarde, excluindo SHA256SUM antigo..."
+	cmsgusermanager="Gerenciamento de usuários MazonOS Linux"
 }
 
 en_US(){
@@ -1409,6 +1414,9 @@ en_US(){
 	cerrotar78="(ENAMETOOLONG) - cwd name muito longo"
 	cerrotar171="(ETOAST) – unidade de fitas on fire"
 	ctools="Tools/Settings"
+	cmsgtestarota="Please wait, testing route to the MazonOS server..."
+	cmsgdelsha256="Please wait, deleting old SHA256SUM..."
+	cmsgusermanager="MazonOS Linux user management"
 }
 
 function scrend(){
@@ -1419,20 +1427,21 @@ function scrend(){
 
 function sh_checkroot(){
 	if [ "$(id -u)" != "0" ]; then
-		alerta "MazonOS Linux installer" "\nVoce deve executar este script como root!"
+		alerta "MazonOS Linux installer" "\nYou should run this script as root!"
 		scrend 0
 	fi
 }
 
 function sh_testdialog(){
 	grafico=$false
-	cinfo=`log_info_msg "Aguarde, verificando dialog..."`
+	cinfo=`log_info_msg "wait, verifying dialog..."`
     msg "INFO" "$cinfo"
     test -e /usr/bin/dialog > /dev/null 2>&1
     evaluate_retval
 
 	if [ $? = $false ]; then
-		echo "Voce deve instalar o pacote dialog para executar o install-mazon!"
+		echo -e "You must install the dialog package to run install-mazon"
+		echo -e "Voce deve instalar o pacote dialog para executar o install-mazon!"
 		scrend 1
 	fi
 	grafico=$true
@@ -1489,7 +1498,7 @@ sh_tools(){
 				--backtitle 	"$ccabec"									\
 				--title 		"$cmsg001"						  			\
 				--cancel-label	"$buttonback"								\
-		        --menu 			"$cmsg003\n\n$cmsg004" 		 				\
+		        --menu 			"\n\n$cmsg004" 		 						\
 		        0 0 0                                 						\
 		        1 "$cgrubinst"												\
 		        2 "$cfstabinst"						  						\
