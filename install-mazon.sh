@@ -1,12 +1,12 @@
 #!/bin/bash
 #
 ################################################################
-#       install dialog Mazon OS - version 1.0       			#
+#       install dialog Mazon OS - version 1.0					#
 #                                                     			#
-#      @utor: Diego Sarzi 		<diegosarzi@gmail.com>			#
-#             Vilmar Catafesta 	<vcatafesta@gmail.com>			#
-#      created: 2019/02/15          licence: MIT      			#
-#      altered: 2019/02/17          licence: MIT      			#
+#      @utor: Diego Sarzi 			<diegosarzi@gmail.com>		#
+#             Vilmar Catafesta 		<vcatafesta@gmail.com>		#
+#      created: 2019/02/15          licence: MIT				#
+#      altered: 2019/02/17-25       licence: MIT				#
 #################################################################
 
 #. /lib/lsb/init-functions
@@ -1222,52 +1222,7 @@ function sh_format(){
 	return $format
 }
 
-function dlmenu(){
-	while true
-	do
-		dl=$(dialog 										\
-			--clear                                 		\
-			--stdout                                		\
-			--backtitle 	"$ccabec"						\
-			--title 		' *** MazonOS INSTALL *** v1.0'	\
-			--cancel-label	"$buttonback"					\
-	        --menu  		'Choose package to download:'   \
-	        0 0 0                                 			\
-	        1 "$cmsg018" 				 					\
-	        2 "$cmsg019"  									\
-		   	3 "$cmsg000"   									)
-
-			exit_status=$?
-			case $exit_status in
-				$ESC)
-					#scrend 1
-					#exit 1
-					scrmain
-					;;
-				$CANCEL)
-					#scrend 0
-					scrmain
-					;;
-			esac
-		    case $dl in
-				1)	FULLINST=$true
-					#tarball_default=$tarball_full
-					#sha256_default=$sha256_full
-					cmsgversion=$cmsg016
-					sh_wgetdefault
-					;;
-				2) 	FULLINST=$false
-					#tarball_default=$tarball_min
-					#sha256_default=$sha256_min
-					cmsgversion=$cmsg015
-					sh_wgetdefault
-					;;
-				3) 	clear; exit;;
-			esac
-	done
-}
-
-scrmain(){
+function scrmain(){
 	while true
 	do
 		sd=$(ls /dev/sd*)
@@ -1307,7 +1262,7 @@ scrmain(){
 	done
 }
 
-pt_BR(){
+function pt_BR(){
 	lang="pt_BR"
 	buttonback="Voltar"
 	cmsg000="Sair"
@@ -1425,7 +1380,7 @@ pt_BR(){
 	cparticao="PARTIÇÃO"
 }
 
-en_US(){
+function en_US(){
 	lang="en_US"
 	buttonback="Back"
 	cmsg000="Exit"
