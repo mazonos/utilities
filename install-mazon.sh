@@ -785,7 +785,7 @@ function sh_wgetdefault(){
 	   	fmazon=$( dialog --stdout --fselect './' 6 40 )
 		quit
 	else
-		confmulti "$cdlok1" "$cdlok2" "\n[ok] $tarball_default $cdlok3" "$cdlok4"
+		confmulti "$cdlok1" "$cdlok2" "\n[ok] $tarball_default $cdlok3" "$cshaok" "$cdlok4"
 		local ninit=$?
 		case $ninit in
 			$D_OK)
@@ -1347,6 +1347,7 @@ pt_BR(){
 	cdlok2="\n[ok] Download concluído com sucesso."
 	cdlok3="encontrado."
 	cdlok4="\n\nIniciar a instalação agora?"
+	cshaok="\n[ok] Checksum verificado com sucesso."
     plswait="Por favor aguarde, baixando pacote..."
 	cfinish="Instalação completa! Boas vibes.\nReboot para iniciar com MazonOS Linux. \n\nEnviar bugs root@mazonos.com"
 	cgrubsuccess="OK! GRUB instalado com sucesso!"
@@ -1432,6 +1433,7 @@ en_US(){
 	cdlok2="\n[ok] Download completed successfully."
 	cdlok3="found."
 	cdlok4="\n\nStart the installation now?"
+	cshaok="\n[ok] Checksum successfully verified."
     plswait="Please wait, Downloading package..."
 	cfinish="Install Complete! Good vibes. \nReboot to start with MazonOS Linux. \n\nSend bugs - root@mazonos.com"
 	cgrubsuccess="OK! GRUB successfully installed!"
