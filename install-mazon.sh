@@ -416,7 +416,7 @@ function sh_choosepackage(){
 
 
 function sh_delpackageindex(){
-    ret=`log_info_msg "Aguarde, excluindo indice antigo..."`
+    ret=`log_info_msg "$cmsgdelpackageindex"`
     msg "INFO" "$ret"
     rm index.html* > /dev/null 2>&1
     evaluate_retval
@@ -425,7 +425,7 @@ function sh_delpackageindex(){
 }
 
 function sh_wgetpackageindex(){
-    ret=`log_info_msg "Aguarde, baixando indice de pacotes..."`
+    ret=`log_info_msg "Aguarde, baixando indice dos pacotes..."`
     msg "INFO" "$ret"
     wget $url_mazon > /dev/null 2>&1
     evaluate_retval
@@ -451,7 +451,7 @@ function sh_delsha256sum(){
 function sh_wgetsha256sum(){
 	sh_delsha256sum
 	clinksha=$url_mazon$sha256_default
-    ret=`log_info_msg "Aguarde, baixando sha256 novo..."`
+    ret=`log_info_msg "$cmsggetshasum"`
     msg "INFO" "$ret"
     wget -q $clinksha > /dev/null 2>&1
     evaluate_retval
@@ -459,7 +459,7 @@ function sh_wgetsha256sum(){
 }
 
 function sh_deltarball(){
-    cinfo=`log_info_msg "Aguarde, excluindo tarball antigo..."`
+    cinfo=`log_info_msg "$cmsgdeltarball"`
     msg "INFO" "$info"
     rm -f $tarball_default > /dev/null 2>&1
     evaluate_retval
@@ -467,7 +467,7 @@ function sh_deltarball(){
 }
 
 function sh_testsha256sum(){
-    cinfo=`log_info_msg "Aguarde, testando sha256sum"`
+    cinfo=`log_info_msg "$cmsgtestsha256sum"`
     msg "INFO" "$cinfo"
     #result=`sha256sum -c $sha256_default`
     sha256sum -c $sha256_default > /dev/null 2>&1
@@ -484,7 +484,7 @@ function sh_adduser(){
 		fi
 
 		sh_initbind
-		cinfo=`log_info_msg "Aguarde, criando usuario..."`
+		cinfo=`log_info_msg "$cmsgadduser"`
 	    msg "INFO" "$cinfo"
 	    chroot . /bin/bash -c "useradd -m -G $cgroups $cuser -p $cpass > /dev/null 2>&1"
 	    chroot . /bin/bash -c "(echo $cuser:$cpass) | chpasswd > /dev/null 2>&1"
@@ -532,7 +532,7 @@ function sh_exectar(){
 		6 50
 	fi
 	if [ $ret <> $true ]; then
-	    alerta "*** TAR *** " "Erro na descompatacao do pacote"
+	    alerta "*** TAR *** " "$cmsgerrotar!"
 		TARSUCCESS=$false
 		return $TARSUCCESS
 	fi
@@ -606,7 +606,7 @@ function grubinstall(){
 		fi
 
 		sh_bind
-		mensagem "Aguarde, instalando o GRUB no disco: \n\n$sd"
+		mensagem "$cmsgwaitgrub: \n\n$sd"
 	    chroot . /bin/bash -c "grub-install $sd" > /dev/null 2>&1
 		chroot . /bin/bash -c "grub-mkconfig -o /boot/grub/grub.cfg" > /dev/null 2>&1
 	    alerta "*** GRUB *** " "$cgrubsuccess"
@@ -1393,6 +1393,13 @@ pt_BR(){
 	cmsgdelsha256="Aguarde, excluindo SHA256SUM antigo..."
 	cmsgusermanager="Gerenciamento de usuários MazonOS Linux"
 	cpackagedisp="Pacotes disponiveis"
+    cmsggetshasum="Aguarde, baixando sha256sum novo..."
+	cmsgdelpackageindex="Aguarde, excluindo indice antigo..."
+    cmsgdeltarball="Aguarde, excluindo tarball antigo..."
+    cmsgtestsha256sum="Aguarde, testando sha256sum"
+	cmsgadduser="Aguarde, criando usuario..."
+    cmsgerrotar="Erro na descompatacao do pacote"
+	cmsgwaitgrub="Aguarde, instalando o GRUB no disco"
 }
 
 en_US(){
@@ -1479,6 +1486,13 @@ en_US(){
 	cmsgdelsha256="Please wait, deleting old SHA256SUM..."
 	cmsgusermanager="MazonOS Linux user management"
 	cpackagedisp="Available packages"
+    cmsggetshasum="Please wait, download sha256sum new..."
+	cmsgdelpackageindex="Please wait, deleting old index..."
+    cmsgdeltarball="Please wait, deleting old tarball..."
+    cmsgtestsha256sum="Wait, testing sha256sum"
+	cmsgadduser="Please wait, creating user..."
+    cmsgerrotar="Error in package unpacking"
+	cmsgwaitgrub="Please wait, installing grub to disk"
 }
 
 function scrend(){
