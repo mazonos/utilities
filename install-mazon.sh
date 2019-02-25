@@ -47,8 +47,7 @@ cuser=""
 cpass=""
 cshell="/bin/bash"
 chost="mazonos"
-#groups="audio,video,netdev"
-cgroups="audio,video"
+cgroups="audio,video,netdev"
 chome="/home"
 
 NORMAL="\\033[0;39m"         # Standard console grey
@@ -110,6 +109,7 @@ declare -r tarball_min="mazon_minimal-0.2.tar.xz"
 declare -r sha256_min="mazon_minimal-0.2.tar.xz.sha256sum"
 declare -r tarball_full="mazon_beta-1.2.tar.xz"
 declare -r sha256_full="mazon_beta-1.2.tar.xz.sha256sum"
+fullinst=$true
 tarball_default=$tarball_full
 sha256_default=$sha256_full
 declare -r pwd=$PWD
@@ -427,6 +427,11 @@ function sh_testsha256sum(){
 function sh_adduser(){
 
 	if [ "$cuser" != " " ]; then
+
+		if [ $fullinst = $false ]; then
+			cgroups="audio,video"
+		fi
+
 		sh_initbind
 		cinfo=`log_info_msg "Aguarde, criando usuario..."`
 	    msg "INFO" "$cinfo"
@@ -803,6 +808,7 @@ function menuinstall(){
 			case "$resfull" in
 				# TROCAR POR /MNT *********************
 			XFCE4)
+				fullinst=$true
 				tarball_default=$tarball_full
 				sha256_default=$sha256_full
 				cmsgversion=$cmsg016
@@ -812,6 +818,7 @@ function menuinstall(){
 				;;
 
 			i3WM)
+				fullinst=$true
 				tarball_default=$tarball_full
 				sha256_default=$sha256_full
 				cmsgversion=$cmsg016
@@ -823,6 +830,7 @@ function menuinstall(){
 			;;
 
 		minimal)
+			fullinst=$false
 			tarball_default=$tarball_min
 			sha256_default=$sha256_min
 			cmsgversion=$cmsg015
@@ -1143,11 +1151,13 @@ function dlmenu(){
 				1)	tarball_default=$tarball_full
 					sha256_default=$sha256_full
 					cmsgversion=$cmsg016
+					fullinst=$true
 					sh_wgetdefault
 					;;
 				2) 	tarball_default=$tarball_min
 					sha256_default=$sha256_min
 					cmsgversion=$cmsg015
+					fullinst=$false
 					sh_wgetdefault
 					;;
 				3) 	clear; exit;;
@@ -1450,8 +1460,6 @@ sh_tools(){
 	done
 }
 
-
-
 # Init - configuracao inicial
 clear
 init
@@ -1463,5 +1471,3 @@ Passagem padrão original de Lorem Ipsum, usada desde o século XVI.
 Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
 Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
 LIXO
-
-
