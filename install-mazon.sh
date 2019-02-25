@@ -1043,10 +1043,9 @@ function choosedisk(){
 	# escolha o disco a ser particionado // Choose disk to be parted
 	################################################################
 	#disks=( $(fdisk -l | egrep -o '^/dev/sd[a-z]'| sed "s/$/ '*' /") )
-	LDISK=0
 	#disks=( $(fdisk -l | cut -dk -f2 | grep -o /sd[a-z]))
 	disks=($(ls /dev/sd* | grep -o '/dev/sd[a-z]' | cat | sort | uniq | sed "s/$/ '*' /"))
-
+	LDISK=0
 	sd=$(dialog --clear 														\
 				--title 		"DISK"								  			\
 				--backtitle	 	"$ccabec"					 					\
@@ -1209,10 +1208,10 @@ function sh_format(){
 	        mkfs -F -t ext4 -L "MAZONOS" $part > /dev/null
 			local nfmt=$?
 			if [ $nfmt = 0 ] ; then
-				alerta "MKFS" "Formatacao terminada com sucesso."
+				alerta "MKFS" "$cmsg_mkfs_ok"
 				LFORMAT=1
 			else
-				alerta "MKFS" "Erro na Formatacao."
+				alerta "MKFS" "$cmsg_mkfs_error."
 				LFORMAT=0
 				return 1
 			fi
@@ -1420,7 +1419,8 @@ pt_BR(){
 	cmsg_try_mount_partition="Particao já montada. Tentar?"
 	cmsg_mount_failed="Falha de montagem da partição. Repetir?"
 	cmsg_enter_work_dir="Aguarde, Entrando no diretorio de trabalho."
-
+	cmsg_mkfs_ok="Formatacao terminada com sucesso."
+	cmsg_mkfs_error="Erro na Formatacao."
 }
 
 en_US(){
@@ -1534,8 +1534,8 @@ en_US(){
 	cmsg_try_mount_partition="Partition already mounted. Try?"
 	cmsg_mount_failed="Partition mount failed. Repeat?"
 	cmsg_enter_work_dir="Please wait, entering the work directory."
-
-
+	cmsg_mkfs_ok="Formation completed successfully."
+	cmsg_mkfs_error="Formatting error."
 }
 
 function scrend(){
