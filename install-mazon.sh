@@ -425,7 +425,7 @@ function sh_delpackageindex(){
 }
 
 function sh_wgetpackageindex(){
-    ret=`log_info_msg "Aguarde, baixando indice dos pacotes..."`
+    ret=`log_info_msg "$cmsg_wget_package_index"`
     msg "INFO" "$ret"
     wget $url_mazon > /dev/null 2>&1
     evaluate_retval
@@ -670,7 +670,7 @@ function sh_wgettarball(){
 function sh_wgetdefault(){
 	sh_testarota
 	if [ $? = $false ]; then
-		info "\nOps, sem rota para o servidor da MazonOS!\nVerifique sua internet."
+		info "\n$cmsgnoroute"
 		menuinstall
 	fi
 	sh_delpackageindex
@@ -698,12 +698,12 @@ function sh_wgetdefault(){
 			if [ $? = $false ]; then
 				sh_testarota
 				if [ $? = $false ]; then
-					info "\nOps, sem rota para o servidor da MazonOS!\nVerifique sua internet."
+					info "\n$cmsgnoroute"
 					menuinstall
 				fi
 				sh_wgetsha256sum
 				if [ $? = $false ]; then
-					info "\nOps, erro no download de $clinksha!\nVerifique sua internet."
+					info "\n$cmsgerrodlsha1 $clinksha!\n$cmsgerrodlsha2"
 					menuinstall
 				fi
 			fi
@@ -711,19 +711,19 @@ function sh_wgetdefault(){
 		else
 			sh_testarota
 			if [ $? = $false ]; then
-				info "\nOps, sem rota para o servidor da MazonOS!\nVerifique sua internet."
+				info "\n$cmsgnoroute"
 				menuinstall
 			fi
 
 			sh_wgetsha256sum
 			if [ $? = $false ]; then
-				info "\nOps, erro no download de $clinksha!\nVerifique sua internet."
+				info "\n$cmsgerrodlsha1 $clinksha!\n$cmsgerrodlsha2"
 				menuinstall
 			fi
 
 			sh_testsha256sum
 			if [ $? = $false ]; then
-				conf "*** SHA256 ***" "\nOps, Pacote corrompido. Baixar novamente o pacote?"
+				conf "*** SHA256 ***" "\n$cmsgcorrdlnew"
 				if [ $? = $false ]; then
 					menuinstall
 				else
@@ -732,7 +732,7 @@ function sh_wgetdefault(){
 					sh_wgetsha256sum
 					sh_testsha256sum
 					if [ $? = $false ]; then
-						info "\nOps, Pacote corrompido. Favor repetir a operação!"
+						info "\n$cmsg_corr_rep"
 						menuinstall
 					fi
 				fi
@@ -742,7 +742,7 @@ function sh_wgetdefault(){
 	else
 		sh_testarota
 		if [ $? = $false ]; then
-			info "\nOps, sem rota para o servidor da MazonOS!\nVerifique sua internet."
+			info "\n$cmsgnoroute"
 			menuinstall
 		fi
 	fi
@@ -757,7 +757,7 @@ function sh_wgetdefault(){
 				sh_wgettarball
 				sh_testsha256sum
 				if [ $? = $false ]; then
-					conf "*** SHA256 ***" "\nOps, Pacote corrompido. Baixar novamente o pacote?"
+					conf "*** SHA256 ***" "\n$cmsgcorrdlnew"
 					if [ $? = $false ]; then
 						menuinstall
 					else
@@ -766,7 +766,7 @@ function sh_wgetdefault(){
 						sh_wgetsha256sum
 						sh_testsha256sum
 						if [ $? = $false ]; then
-							info "\nOps, Pacote corrompido. Favor repetir a operação!"
+							info "\n$cmsg_corr_rep"
 							menuinstall
 						fi
 					fi
@@ -823,7 +823,7 @@ function sh_check_install(){
 		sh_mountpartition
 	fi
 
-	confmulti "INSTALL" "\nDir Montagem : $dir_install" "\n    Partição : $part" "\n\nTudo pronto para iniciar a instalação. Confirma?"
+	confmulti "INSTALL" "\nDir Montagem : $dir_install" "\n    Partição : $part" "\n\n$cmsg_all_ready"
 	local nOk=$?
 	case $nOk in
 		$D_ESC)
@@ -837,7 +837,7 @@ function sh_check_install(){
 	esac
 	sh_exectar
 	if [ $? = 1 ]; then
-		conf "*** ERRO ***" "Erro na descompactação do pacote. Deseja ainda prosseguir?"
+		conf "*** ERRO ***" "$cmsg_erro_tar_continue"
 		local nOk1=$?
 		case $nOk1 in
 		$D_ESC)
@@ -1000,7 +1000,7 @@ function sh_checkdisk(){
 
 	local nchoice=0
 	if [ "$dsk" <> " " ]; then
-		conf "** AVISO **" "\nO disco selecionado contém partições montadas.\n\n$dsk\n\nDesmontar?"
+		conf "$cwarning" "\n$cmsg_all_mounted_part\n\n$dsk\n\n$cmsg_dismount"
 		nchoice=$?
 		if [ $nchoice = 0 ]; then
 			for i in $(seq 1 10); do
@@ -1016,7 +1016,7 @@ function sh_checksimple(){
 
 	local nchoice=0
 	if [ "$sdsk" <> " " ]; then
-		alerta "** AVISO **" "\nSó para lembrar que o disco contém partições montadas.\n\n$sdsk"
+		alerta "$cwarning" "\n$cmsg_alert_mount\n\n$sdsk"
 	fi
 	return $nchoice
 }
@@ -1029,7 +1029,7 @@ function sh_checkpartition(){
 
 	local nchoice=0
 	if [ "$cpart" <> " " ]; then
-		conf "** AVISO **" "\nA partição está montada.\n\n$cpart\n\nDesmontar?"
+		conf "$cwarning" "\n$cmsg_conf_dismount\n\n$cpart\n\n$cmsg_dismount"
 		nchoice=$?
 		if [ $nchoice = $true ]; then
 			umount -f -rl $part 2> /dev/null
@@ -1094,7 +1094,7 @@ function choosedisk(){
 					sh_checkdisk
 					local nmontada=$?
 					if [ $nmontada = 1 ]; then
-						alerta "CHOOSEDISK" "Necessário desmontar particao para reparticionar automaticamente."
+						alerta "CHOOSEDISK" "$cmsg_nec_dismount"
 						choosedisk
 					fi
 					conf "$cmsg020" "$cmsg020\n$cmsg014"
@@ -1117,7 +1117,7 @@ function choosedisk(){
 }
 
 function sh_umountpartition(){
-	mensagem "Aguarde, Desmontando particao de trabalho."
+	mensagem "$cmsg_umount_partition"
 	umount -rl $part 2> /dev/null
 	LMOUNT=0
 	cd $pwd
@@ -1125,15 +1125,15 @@ function sh_umountpartition(){
 }
 
 function sh_mountpartition(){
-	mensagem "Aguarde, criando diretorio de trabalho."
+	mensagem "$cmsg_create_dir"
 	mkdir -p $dir_install
-	mensagem "Aguarde, Montando particao de trabalho."
+	mensagem "$cmsg_mount_partition"
 
 	while true
 	do
 		mount $part $dir_install 2> /dev/null
 		if [ $? = 32 ]; then # monta?
-			conf "** MOUNT **" "Particao já montada. Tentar?"
+			conf "** MOUNT **" "$cmsg_try_mount_partition"
             if [ $? = 0 ]; then
 				loop
 			fi
@@ -1141,7 +1141,7 @@ function sh_mountpartition(){
 			break
 		fi
 		if [ $? = 1 ]; then # fail?
-			conf "** MOUNT **" "Falha de montagem da partição. Tentar?"
+			conf "** MOUNT **" "$cmsg_mount_failed"
             if [ $? = 0 ]; then
 				loop
 			fi
@@ -1151,7 +1151,7 @@ function sh_mountpartition(){
 		break
 	done
 	LMOUNT=1
-	mensagem "Aguarde, Entrando no diretorio de trabalho."
+	mensagem "$cmsg_enter_work_dir"
 	cd $dir_install
 	#menuinstall
 }
@@ -1400,6 +1400,27 @@ pt_BR(){
 	cmsgadduser="Aguarde, criando usuario..."
     cmsgerrotar="Erro na descompatacao do pacote"
 	cmsgwaitgrub="Aguarde, instalando o GRUB no disco"
+	cmsgnoroute="Ops, sem rota para o servidor da MazonOS!\nVerifique sua internet."
+	cmsgerrodlsha1="Ops, erro no download de !\nVerifique sua internet."
+	cmsgerrodlsha2="Verifique sua internet."
+	cmsgcorrdlnew="Ops, Pacote corrompido. Baixar novamente o pacote?"
+	cmsg_corr_rep="Ops, Pacote corrompido. Favor repetir a operação!"
+	cmsg_erro_tar_continue="Erro na descompactação do pacote. Deseja ainda prosseguir?"
+	cmsg_all_ready="Tudo pronto para iniciar a instalação. Confirma?"
+    cmsg_wget_package_index="Aguarde, baixando indice dos pacotes..."
+	cmsg_nec_dismount="Necessário desmontar particao para reparticionar automaticamente."
+	cwarning="** AVISO **"
+	cmsg_alert_mount="Só para lembrar que o disco contém partições montadas."
+	cmsg_conf_dismount="A partição está montada."
+	cmsg_dismount="Desmontar?"
+	cmsg_all_mount_part="O disco selecionado contém partições montadas."
+	cmsg_umount_partition="Aguarde, Desmontando particao de trabalho."
+	cmsg_create_dir="Aguarde, criando diretorio de trabalho."
+	cmsg_mount_partition="Aguarde, Montando particao de trabalho."
+	cmsg_try_mount_partition="Particao já montada. Tentar?"
+	cmsg_mount_failed="Falha de montagem da partição. Repetir?"
+	cmsg_enter_work_dir="Aguarde, Entrando no diretorio de trabalho."
+
 }
 
 en_US(){
@@ -1493,6 +1514,28 @@ en_US(){
 	cmsgadduser="Please wait, creating user..."
     cmsgerrotar="Error in package unpacking"
 	cmsgwaitgrub="Please wait, installing grub to disk"
+	cmsgnoroute="Oops, no route to the MazonOS server! \nCheck your internet."
+	cmsgerrodlsha1="Ops, error downloading of"
+	cmsgerrodlsha2="Check your internet."
+	cmsgcorrdlnew="Ops, corrupted package. Download the package again?"
+	cmsg_corr_rep="Ops, corrupted package. Please retry the operation!"
+	cmsg_erro_tar_continue="Error in decompressing the package. Do you want to continue?"
+	cmsg_all_ready="All ready to begin the installation. Do you confirm?"
+    cmsg_wget_package_index="Wait, downloading package index..."
+	cmsg_nec_dismount="Need to dismount partition to repartition automatically."
+	cwarning="** WARNING **"
+	cmsg_alert_mount="Just to remember that the disk contains mounted partitions."
+	cmsg_conf_dismount="The partition is mounted."
+	cmsg_dismount="Disassemble?"
+	cmsg_all_mount_part="The selected disk contains mounted partitions."
+	cmsg_umount_partition="Please wait, dismantling the working partition."
+	cmsg_create_dir="wait, creating working directory."
+	cmsg_mount_partition="Please wait, setting up workpart."
+	cmsg_try_mount_partition="Partition already mounted. Try?"
+	cmsg_mount_failed="Partition mount failed. Repeat?"
+	cmsg_enter_work_dir="Please wait, entering the work directory."
+
+
 }
 
 function scrend(){
