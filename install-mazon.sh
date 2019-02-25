@@ -1557,14 +1557,14 @@ function sh_checkroot(){
 
 function sh_testdialog(){
 	grafico=$false
-	cinfo=`log_info_msg "wait, verifying dialog..."`
+	cinfo=`log_info_msg "Wait, verifying dialog..."`
     msg "INFO" "$cinfo"
     test -e /usr/bin/dialog > /dev/null 2>&1
     evaluate_retval
 
 	if [ $? = $false ]; then
-		echo -e "You must install the dialog package to run install-mazon"
-		echo -e "Voce deve instalar o pacote dialog para executar o install-mazon!"
+		echo -e "\nYou must install the dialog package to run install-mazon"
+		echo -e "\nVoce deve instalar o pacote dialog para executar o install-mazon!"
 		scrend 1
 	fi
 	grafico=$true
