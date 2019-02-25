@@ -502,7 +502,7 @@ function sh_bind(){
 		bindyes=$?
 		if [ $bindyes = $false ]; then
 		    alerta "*** BIND *** " "$cancelbind"
-			STANDALONE = $false
+			STANDALONE=$false
 			return $STANDALONE
 		fi
 	fi
@@ -523,7 +523,7 @@ function sh_bind(){
 
 	if [ $STANDALONE = $true ]; then
 	    alerta "*** BIND *** " "BIND OK"
-		STANDALONE = $false
+		STANDALONE=$false
 	fi
 }
 
@@ -557,7 +557,7 @@ function grubinstall(){
 	fi
 	#sh_umountpartition
 
-	if [ $STANDALONE = $fals ]; then
+	if [ $STANDALONE = $false ]; then
 		sh_finish
 	fi
 }
@@ -567,7 +567,7 @@ function sh_fstab(){
 		conf "*** GRUB ***" "Alterar fstab?"
 		fstabyes=$?
 		if [ $fstabyes = $false ]; then
-			STANDALONE = $false
+			STANDALONE=$false
 			return $STANDALONE
 		fi
 	fi
@@ -583,9 +583,15 @@ function sh_fstab(){
 	label="/            ext4     defaults            1     1"
 	sed -ir "/<xxx>/ i $xuuid $label" $cfstab
 	sed -i 's|/dev/<xxx>|#'$part'|g' $cfstab
-	local result=$( cat $cfstab )
-	display_result "$result" "$cfstab"
-	STANDALONE = $false
+
+	if [ $STANDALONE = $true ]; then
+		nano $cfstab
+		STANDALONE=$false
+	else
+		local result=$( cat $cfstab )
+		display_result "$result" "$cfstab"
+		STANDALONE=$false
+	fi
 }
 
 function sh_finish(){
