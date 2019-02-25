@@ -566,7 +566,7 @@ function sh_bind(){
 	if [ $LPARTITION -eq 0 ]; then
 		choosepartition
 		if [ $LPARTITION -eq 0 ]; then
-			info $cancelinst
+			info "\n$cancelinst"
 			return 1
 		fi
 	fi
@@ -632,7 +632,7 @@ function sh_fstab(){
 	if [ $LPARTITION -eq 0 ]; then
 		choosepartition
 		if [ $LPARTITION -eq 0 ]; then
-			info $cancelinst
+			info "\n$cancelinst"
 			return 1
 		fi
 	fi
@@ -793,7 +793,7 @@ function sh_wgetdefault(){
 				;;
 
 			$D_CANCEL)
-				info $cancelinst
+				info "\n$cancelinst"
 				menuinstall
 				;;
 		esac
@@ -807,7 +807,7 @@ function sh_check_install(){
 	if [ $LPARTITION -eq 0 ]; then
 		choosepartition
 		if [ $LPARTITION -eq 0 ]; then
-			info $cancelinst
+			info "\n$cancelinst"
 			return 1
 		fi
 	fi
@@ -827,11 +827,11 @@ function sh_check_install(){
 	local nOk=$?
 	case $nOk in
 		$D_ESC)
-			info $cancelinst
+			info "\n$cancelinst"
 			menuinstall
 			;;
 		$D_CANCEL)
-			info $cancelinst
+			info "\n$cancelinst"
 			menuinstall
 			;;
 	esac
@@ -841,11 +841,11 @@ function sh_check_install(){
 		local nOk1=$?
 		case $nOk1 in
 		$D_ESC)
-			info $cancelinst
+			info "\n$cancelinst"
 			menuinstall
 			;;
 		$D_CANCEL)
-			info $cancelinst
+			info "\n$cancelinst"
 			menuinstall
 			;;
 		esac
@@ -1044,7 +1044,8 @@ function choosedisk(){
 	################################################################
 	#disks=( $(fdisk -l | egrep -o '^/dev/sd[a-z]'| sed "s/$/ '*' /") )
 	#disks=( $(fdisk -l | cut -dk -f2 | grep -o /sd[a-z]))
-	disks=($(ls /dev/sd* | grep -o '/dev/sd[a-z]' | cat | sort | uniq | sed "s/$/ '*' /"))
+	#disks=($(ls /dev/sd* | grep -o '/dev/sd[a-z]' | cat | sort | uniq | sed "s/$/ '*' /"))
+	disks=($(fdisk -l | sed -n /sd[a-z]':'/p | awk '{print $2,$3$4}' | cut -d',' -f1 | sed 's/://g'))
 	LDISK=0
 	sd=$(dialog --clear 															\
 				--title 		"$cdisco"							  				\
