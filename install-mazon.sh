@@ -483,6 +483,10 @@ function sh_adduser(){
 			cgroups="audio,video"
 		fi
 
+		if [ $LMOUNT -eq 0 ]; then
+			sh_mountpartition
+		fi
+
 		sh_initbind
 		cinfo=`log_info_msg "$cmsgadduser"`
 	    msg "INFO" "$cinfo"
