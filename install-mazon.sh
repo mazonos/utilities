@@ -339,7 +339,7 @@ function display_result() {
 }
 
 function alerta(){
-	dialog 	--clear						\
+	dialog 								\
 			--title 	"$1" 			\
 			--backtitle	"$ccabec"		\
 			--msgbox 	"$2" 			\
@@ -347,7 +347,7 @@ function alerta(){
 }
 
 function info(){
-	dialog 	--clear 					\
+	dialog 			 					\
 			--title 	"$cmsg002"		\
 			--backtitle	"$ccabec"		\
 			--msgbox 	"$*" 			\
@@ -994,7 +994,6 @@ function menuinstall(){
 	#######################
    	#grubinstall
 	#sh_finish
-	#clear
 }
 
 function sh_checkdisk(){
@@ -1052,7 +1051,7 @@ function choosedisk(){
 	#disks=($(ls /dev/sd* | grep -o '/dev/sd[a-z]' | cat | sort | uniq | sed "s/$/ '*' /"))
 	disks=($(fdisk -l | sed -n /sd[a-z]':'/p | awk '{print $2,$3$4}' | cut -d',' -f1 | sed 's/://g'))
 	LDISK=0
-	sd=$(dialog --clear 															\
+	sd=$(dialog 		 															\
 				--title 		"$cdisco"							  				\
 				--backtitle	 	"$ccabec"					 						\
 				--cancel-label 	"$buttonback"										\
@@ -1171,7 +1170,6 @@ function choosepartition(){
 	#partitions=( $(fdisk -l | cut -dk -f2 | grep -o /sd[a-z][0-9]))
 	partitions=( $(fdisk -l | sed -n /sd[a-z][0-9]/p | awk '{print $1,$5}'))
 	part=$(dialog 														\
-			--clear	 													\
 			--title 		"$cparticao"					  			\
 			--backtitle	 	"$ccabec"					 				\
 			--cancel-label	"$buttonback"								\
@@ -1234,7 +1232,6 @@ function scrmain(){
 	do
 		sd=$(ls /dev/sd*)
 		main=$(dialog 														\
-				--clear                                                  	\
 				--stdout                                                  	\
 				--backtitle 	"$ccabec"									\
 				--title 		"$cmsg001"						  			\
@@ -1508,7 +1505,6 @@ function en_US(){
 
 function scrend(){
 	#info "By"
-	#clear
 	exit $1
 }
 
@@ -1540,7 +1536,6 @@ function init(){
 	sh_checkroot
 	while true; do
 		i18=$(dialog													\
-			--clear														\
 			--stdout                                                  	\
 			--backtitle	 	"MazonOS Linux installer v1.0"				\
 			--title 		'Welcome to the MazonOS installer'			\
@@ -1593,7 +1588,7 @@ function sh_packagedisp(){
         | cut -d'"' -f3 | sed 's/>//g' \
         | sed 's/<\/a//g' ))
 
-     sd=$(dialog --clear                                        \
+     sd=$(dialog 				                                \
                  --backtitle     "$ccabec"                      \
                  --title         "$ccabec"                      \
                  --cancel-label  "Voltar"                       \
@@ -1655,7 +1650,6 @@ sh_tools(){
 }
 
 # Init - configuracao inicial
-clear
 init
 
 :<<'LIXO'
