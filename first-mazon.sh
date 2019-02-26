@@ -6,20 +6,26 @@
 #  created: 2019/02/26 licence: MIT           #
 ###############################################
 
-keymaps=$(find /usr/share/keymaps/ -name "*.map.gz" | cut -d/ -f7 | sed 's/.map.gz//g'| sort)
+echo -e "\nConfig Layout Keyboard... <PRESS ENTER>" ; read
+
+keymaps=( $( find /usr/share/keymaps/ -name "*.map.gz" | cut -d/ -f7 | sed -e "s/.map.gz/ [OK]/g" | sort ) )
 
 keyboard=$(dialog --stdout \
-	--backtitle 'Ajust keyboard layout:' \
-	--menu 'Choose you keyboard:' 0 0 0 \
-	"${keymaps[@]}" "")
+        --backtitle 'Keyboard Layout:' \
+	--menu 'Choose you keyboard:' 0 40 30 \
+	"${keymaps[@]}"
+	)
 
 if [ ! -z "$keyboard" ]; then
+	echo "KEYMAP='$keyboard'" >> /etc/sysconfig/console
 	loadkeys $keyboard
 fi
 
+clear
+
 # echo first login
-echo -e "\n*****************************"
-echo -e "First Login: \nuser: root password: root \n" 
+#echo -e "\n*****************************"
+#echo -e "First Login: \nuser: root password: root \n" 
 
 
 # remove script
