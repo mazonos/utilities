@@ -1508,7 +1508,7 @@ function en_US(){
 
 function scrend(){
 	#info "By"
-	clear
+	#clear
 	exit $1
 }
 
@@ -1527,8 +1527,8 @@ function sh_testdialog(){
     evaluate_retval
 
 	if [ $? = $false ]; then
-		echo -e "\nYou must install the dialog package to run install-mazon"
-		echo -e "\nVoce deve instalar o pacote dialog para executar o install-mazon!"
+		echo "You must install the dialog package to run install-mazon"
+		echo "Voce deve instalar o pacote dialog para executar o install-mazon!"
 		scrend 1
 	fi
 	grafico=$true
