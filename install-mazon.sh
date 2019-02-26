@@ -526,10 +526,10 @@ function sh_exectar(){
 	    tar xJpvf $pwd/$tarball_default -C $dir_install
 		nret=$?
 	else
-		(pv -n $pwd/$tarball_default								\
-		|tar xJpf - -C $dir_install ) 2>&1 							\
-		|dialog	--backtitle "$ccabec" --gauge "Extracting files..." \
-		6 50
+		(pv -n $pwd/$tarball_default													\
+		|tar xJpf - -C $dir_install ) 2>&1 												\
+		|dialog	--title "** TAR **" --backtitle "$ccabec" --gauge "\n$cmsg_extracting" 	\
+		7 60
 	fi
 	if [ $ret <> $true ]; then
 	    alerta "*** TAR *** " "$cmsgerrotar!"
@@ -636,6 +636,11 @@ function sh_fstab(){
 			return 1
 		fi
 	fi
+
+	if [ $LMOUNT -eq 0 ]; then
+		sh_mountpartition
+	fi
+
 	mkdir -p $dir_install/etc >/dev/null
 	xuuid=$(blkid | grep $part | awk '{print $3}')
 	label="/            ext4     defaults            1     1"
@@ -1097,11 +1102,11 @@ function choosedisk(){
 						alerta "CHOOSEDISK" "$cmsg_nec_dismount"
 						choosedisk
 					fi
-					conf "$cmsg020" "$cmsg020\n$cmsg014"
+					conf "$cmsg020" "\n$cmsg020\n$cmsg014"
 					local nb=$?
 					case $nb in
 						$D_OK)
-							echo "label: dos" | echo ";" | sfdisk --force $sd >/dev/null
+							echo "label: dos" | echo ";" | sfdisk --force $sd > /dev/null 2>&1
 							LDISK=1
 							local result=$( fdisk -l $sd )
 						    display_result "$result" "$csmg013"
@@ -1126,11 +1131,12 @@ function sh_umountpartition(){
 
 function sh_mountpartition(){
 	mensagem "$cmsg_create_dir"
-	mkdir -p $dir_install
+	mkdir -p $dir_install 2> /dev/null
 	mensagem "$cmsg_mount_partition"
 
 	while true
 	do
+		umount -f -rl $part 2> /dev/null
 		mount $part $dir_install 2> /dev/null
 		if [ $? = 32 ]; then # monta?
 			conf "** MOUNT **" "$cmsg_try_mount_partition"
@@ -1206,7 +1212,7 @@ function sh_format(){
 	    	# WARNING! FORMAT PARTITION
 		    #######################
 			umount -rl $part 2> /dev/null
-	        mkfs -F -t ext4 -L "MAZONOS" $part > /dev/null
+	        mkfs -F -t ext4 -L "MAZONOS" $part > /dev/null 2>&1
 			local nfmt=$?
 			if [ $nfmt = 0 ] ; then
 				alerta "MKFS" "$cmsg_mkfs_ok"
@@ -1368,7 +1374,7 @@ function pt_BR(){
 	cmsg_alert_mount="Só para lembrar que o disco contém partições montadas."
 	cmsg_conf_dismount="A partição está montada."
 	cmsg_dismount="Desmontar?"
-	cmsg_all_mount_part="O disco selecionado contém partições montadas."
+	cmsg_all_mounted_part="O disco selecionado contém partições montadas."
 	cmsg_umount_partition="Aguarde, Desmontando particao de trabalho."
 	cmsg_create_dir="Aguarde, criando diretorio de trabalho."
 	cmsg_mount_partition="Aguarde, Montando particao de trabalho."
@@ -1379,6 +1385,7 @@ function pt_BR(){
 	cmsg_mkfs_error="Erro na Formatacao."
 	cdisco="DISCO"
 	cparticao="PARTIÇÃO"
+	cmsg_extracting="Aguarde, extraindo arquivos..."
 }
 
 function en_US(){
@@ -1485,7 +1492,7 @@ function en_US(){
 	cmsg_alert_mount="Just to remember that the disk contains mounted partitions."
 	cmsg_conf_dismount="The partition is mounted."
 	cmsg_dismount="Disassemble?"
-	cmsg_all_mount_part="The selected disk contains mounted partitions."
+	cmsg_all_mounted_part="The selected disk contains mounted partitions."
 	cmsg_umount_partition="Please wait, dismantling the working partition."
 	cmsg_create_dir="wait, creating working directory."
 	cmsg_mount_partition="Please wait, setting up workpart."
@@ -1496,6 +1503,7 @@ function en_US(){
 	cmsg_mkfs_error="Formatting error."
 	cdisco="DISK"
 	cparticao="PARTITION"
+	cmsg_extracting="Wait, Extracting files..."
 }
 
 function scrend(){
