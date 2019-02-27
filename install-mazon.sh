@@ -41,6 +41,7 @@ WIDTH=0
 : ${LMOUNT=0}
 : ${TARSUCCESS=$false}
 : ${STANDALONE=$false}
+: ${STARTXFCE4=$true}
 
 # usuario/senha/hostmame
 cuser=""
@@ -522,6 +523,17 @@ function sh_confadduser(){
 
 }
 
+function sh_confstartx(){
+	if [ $FULLINST = $true ]; then
+		if [ $STARTXFCE4 = $true ]; then
+			echo "ck-launch-session dbus-launch --exit-with-session startxfce4" > $dir_install/mnt/etc/skel/.xinitrc
+		else
+			echo "ck-launch-session dbus-launch --exit-with-session i3" > $dir_install/etc/skel/.xinitrc
+		fi
+	fi
+
+}
+
 function sh_exectar(){
 	local nret
   	cd $dir_install
@@ -540,6 +552,7 @@ function sh_exectar(){
 		TARSUCCESS=$false
 		return $TARSUCCESS
 	fi
+	sh_confstartx
 	TARSUCCESS=$true
 	return $TARSUCCESS
 }
@@ -832,7 +845,7 @@ function sh_check_install(){
 		sh_mountpartition
 	fi
 
-	confmulti "INSTALL" "\nDir Montagem : $dir_install" "\n    Partição : $part" "\n\n$cmsg_all_ready"
+	confmulti "** INSTALL ** " "\n Mount : $dir_install" "\n  Part : $part" "\n\n$cmsg_all_ready"
 	local nOk=$?
 	case $nOk in
 		$D_ESC)
@@ -919,6 +932,7 @@ function menuinstall(){
 				# TROCAR POR /MNT *********************
 			XFCE4)
 				FULLINST=$true
+				STARTXFCE4=$true
 				#tarball_default=$tarball_full
 				#sha256_default=$sha256_full
 				cmsgversion=$cmsg016
@@ -929,6 +943,7 @@ function menuinstall(){
 
 			i3WM)
 				FULLINST=$true
+				STARTXFCE4=$false
 				#tarball_default=$tarball_full
 				#sha256_default=$sha256_full
 				cmsgversion=$cmsg016
