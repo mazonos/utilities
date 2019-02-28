@@ -607,7 +607,7 @@ function grubinstall(){
 
 	if [ $grubyes = $true ]; then
 		if [ $LDISK -eq 0 ]; then
-			choosedisk "grub"
+			choosedisk "GRUB"
 			if [ $LDISK -eq 0 ]; then
 				info "\n$ccancelgrub"
 				return 1
@@ -1070,8 +1070,12 @@ function choosedisk(){
 	#disks=($(ls /dev/sd* | grep -o '/dev/sd[a-z]' | cat | sort | uniq | sed "s/$/ '*' /"))
 	disks=($(fdisk -l | sed -n /sd[a-z]':'/p | awk '{print $2,$3$4}' | cut -d',' -f1 | sed 's/://g'))
 	LDISK=0
+	xmsg=$cdisco
+	if [ $1 = "GRUB" ] ; then
+		xmsg=$1
+	fi
 	sd=$(dialog 		 															\
-				--title 		"$cdisco"							  				\
+				--title 		"$xmsg"								  				\
 				--backtitle	 	"$ccabec"					 						\
 				--cancel-label 	"$buttonback"										\
 				--menu 			"\n$cmsg009" 0 50 0 "${disks[@]}" 2>&1 >/dev/tty 	)
@@ -1089,7 +1093,7 @@ function choosedisk(){
 			;;
 	esac
 
-	if [ $1 = "grub" ] ; then
+	if [ $1 = "GRUB" ] ; then
 		LDISK=1
 		return 0
 	fi
@@ -1298,7 +1302,7 @@ function pt_BR(){
 	cmsg007="Escolher partição para instalar"
 	cmsg008="Sair do instalador"
 	cmsgquit="Sair do instalador"
-	cmsg009="Escolha o disco para particionar:"
+	cmsg009="Escolha o disco:"
 	cmsg010="Escolha o tipo:"
 	cmsg011="Particionamento manual usando cfdisk"
 	cmsg012="Experiente"
@@ -1417,7 +1421,7 @@ function en_US(){
 	cmsg007="Choose partition to install"
 	cmsg008="Quit the installer"
 	cmsgquit="Quit the installer"
-	cmsg009="Choose the disk to partition:"
+	cmsg009="Choose the disk:"
 	cmsg010="Choose type:"
 	cmsg011="Manual partitioning using cfdisk"
 	cmsg012="Expert"
