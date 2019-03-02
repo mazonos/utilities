@@ -476,6 +476,16 @@ function sh_testsha256sum(){
     return $?
 }
 
+function sh_confhost(){
+	cinfo=`log_info_msg "$cmsgaddhost"`
+    msg "INFO" "$cinfo"
+	if [ "$chost" != "mazonos" ]; then
+		echo $chost > $dir_install/etc/hostname
+	    return $?
+	fi
+
+}
+
 function sh_adduser(){
 
 	if [ "$cuser" != " " ]; then
@@ -494,6 +504,7 @@ function sh_adduser(){
 	    chroot . /bin/bash -c "useradd -m -G $cgroups $cuser -p $cpass > /dev/null 2>&1"
 	    chroot . /bin/bash -c "(echo $cuser:$cpass) | chpasswd -m > /dev/null 2>&1"
 	    evaluate_retval
+		sh_confhost
 	fi
 }
 
@@ -526,7 +537,7 @@ function sh_confadduser(){
 function sh_confstartx(){
 	if [ $FULLINST = $true ]; then
 		if [ $STARTXFCE4 = $true ]; then
-			echo "ck-launch-session dbus-launch --exit-with-session startxfce4" > $dir_install/mnt/etc/skel/.xinitrc
+			echo "ck-launch-session dbus-launch --exit-with-session startxfce4" > $dir_install/etc/skel/.xinitrc
 		else
 			echo "ck-launch-session dbus-launch --exit-with-session i3" > $dir_install/etc/skel/.xinitrc
 		fi
@@ -1379,6 +1390,7 @@ function pt_BR(){
     cmsgdeltarball="Aguarde, excluindo tarball antigo..."
     cmsgtestsha256sum="Aguarde, testando sha256sum"
 	cmsgadduser="Aguarde, criando usuario..."
+	cmsgaddhost="Aguarde, setando hostname..."
     cmsgerrotar="Erro na descompatacao do pacote"
 	cmsgwaitgrub="Aguarde, instalando o GRUB no disco"
 	cmsgnoroute="Ops, sem rota para o servidor da MazonOS!\nVerifique sua internet."
@@ -1497,6 +1509,7 @@ function en_US(){
     cmsgdeltarball="Please wait, deleting old tarball..."
     cmsgtestsha256sum="Wait, testing sha256sum"
 	cmsgadduser="Please wait, creating user..."
+	cmsgaddhost="Please wait, setting hostname..."
     cmsgerrotar="Error in package unpacking"
 	cmsgwaitgrub="Please wait, installing grub to disk"
 	cmsgnoroute="Oops, no route to the MazonOS server! \nCheck your internet."
