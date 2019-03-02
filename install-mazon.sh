@@ -19,6 +19,14 @@
 : ${D_ITEM_HELP=4}
 : ${D_ESC=255}
 
+# type
+nEFI=1
+nBIOS=4
+nSWAP=19
+nLINUX=20
+# echo "label: dos" | echo "size=50M, type=20" | sfdisk -a --force /dev/sdc
+
+
 trancarstderr=2>&-
 true=0
 TRUE=0
@@ -1139,7 +1147,12 @@ function choosedisk(){
 					local nb=$?
 					case $nb in
 						$D_OK)
-							echo "label: dos" | echo ";" | sfdisk --force $sd > /dev/null 2>&1
+							#echo "label: dos"             | echo ";" | sfdisk --force $sd > /dev/null 2>&1
+							echo "label: gpt"              | sfdisk --force $sd > /dev/null 2>&1
+							echo "size=1M,   type=$nBIOS"  | sfdisk -a --force $sd > /dev/null 2>&1
+							echo "size=400M, type=$nEFI"   | sfdisk -a --force $sd > /dev/null 2>&1
+							echo "size=2G,   type=$nSWAP"  | sfdisk -a --force $sd > /dev/null 2>&1
+							echo ";"                  | sfdisk -a --force $sd > /dev/null 2>&1
 							LDISK=1
 							local result=$( fdisk -l $sd )
 						    display_result "$result" "$csmg013"
