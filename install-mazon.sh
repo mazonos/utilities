@@ -1170,12 +1170,17 @@ do
 					local nb=$?
 					case $nb in
 						$D_OK)
-							#echo "label: dos"             | echo ";" | sfdisk --force $sd > /dev/null 2>&1
-							echo "label: gpt"              | sfdisk --force $sd > /dev/null 2>&1
-							echo "size=1M,   type=$nBIOS"  | sfdisk -a --force $sd > /dev/null 2>&1
+							local xMEMSWAP=$(free -h | grep Mem | awk '{ print $2}' | cut -d"i" -f1)
+							if [ $xMEMSWAP = "" ] ; then
+								xMEMSWAP = "2G" ]
+							fi
+
+							#echo "label: dos" | echo ";" | sfdisk --force $sd > /dev/null 2>&1
+							echo "label: gpt" | sfdisk --force $sd > /dev/null 2>&1
+							echo "size=1M, type=$nBIOS"  | sfdisk -a --force $sd > /dev/null 2>&1
 							echo "size=400M, type=$nEFI"   | sfdisk -a --force $sd > /dev/null 2>&1
-							echo "size=2G,   type=$nSWAP"  | sfdisk -a --force $sd > /dev/null 2>&1
-							echo ";"                  | sfdisk -a --force $sd > /dev/null 2>&1
+							echo "size=$xMEMSWAP, type=$nSWAP"  | sfdisk -a --force $sd > /dev/null 2>&1
+							echo ";" | sfdisk -a --force $sd > /dev/null 2>&1
 							LDISK=1
 							local result=$( fdisk -l $sd )
 						    display_result "$result" "$csmg013"
