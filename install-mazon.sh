@@ -50,6 +50,8 @@ WIDTH=0
 : ${TARSUCCESS=$false}
 : ${STANDALONE=$false}
 : ${STARTXFCE4=$true}
+: ${xUUIDSWAP=""}
+: ${xPARTSWAP=""}
 
 # usuario/senha/hostmame
 cuser=""
@@ -340,11 +342,17 @@ function toloupper(){
 }
 
 function display_result() {
+	local xbacktitle=$ccabec
+
+	if [ "$3" != "" ] ; then
+		xbacktitle="$3"
+	fi
+
 	dialog 	--title 	"$2"			\
     		--no-collapse				\
-			--backtitle	"$ccabec"		\
+			--backtitle	"$xbacktitle"	\
     		--msgbox 	"$1" 			\
-			16 80
+			25 80
 }
 
 function alerta(){
@@ -665,6 +673,7 @@ function sh_fstab(){
 			return $STANDALONE
 		fi
 	fi
+
 	if [ $LPARTITION -eq 0 ]; then
 		choosepartition
 		if [ $LPARTITION -eq 0 ]; then
@@ -682,6 +691,12 @@ function sh_fstab(){
 	label="/            ext4     defaults            1     1"
 	sed -ir "/<xxx>/ i $xuuid $label" $cfstab
 	sed -i 's|/dev/<xxx>|#'$part'|g' $cfstab
+
+	if [ $xUUIDSWAP != "" ]; then
+		label="swap         swap     pri=1               0     0"
+		sed -ir "/<yyy>/ i $xUUIDSWAP $label" $cfstab
+		sed -i 's|/dev/<yyy>|'$xPARTSWAP'|g' $cfstab
+	fi
 
 	if [ $STANDALONE = $true ]; then
 		nano $cfstab
@@ -1082,6 +1097,8 @@ function sh_checkpartition(){
 }
 
 function choosedisk(){
+while true
+do
 	# escolha o disco a ser particionado // Choose disk to be parted
 	################################################################
 	#disks=( $(fdisk -l | egrep -o '^/dev/sd[a-z]'| sed "s/$/ '*' /") )
@@ -1089,7 +1106,7 @@ function choosedisk(){
 	#disks=($(ls /dev/sd* | grep -o '/dev/sd[a-z]' | cat | sort | uniq | sed "s/$/ '*' /"))
 	disks=($(fdisk -l | sed -n /sd[a-z]':'/p | awk '{print $2,$3$4}' | cut -d',' -f1 | sed 's/://g'))
 	LDISK=0
-	xmsg=$cdisco
+	local xmsg=$cdisco
 	if [ $1 = "GRUB" ] ; then
 		xmsg=$1
 	fi
@@ -1111,6 +1128,12 @@ function choosedisk(){
 			scrmain
 			;;
 	esac
+
+	if [ $1 = "SEE" ] ; then
+		local result=$( fdisk -l $sd )
+		display_result "$result" "$csmg013" "$cmsg_part_disk"
+		continue
+	fi
 
 	if [ $1 = "GRUB" ] ; then
 		LDISK=1
@@ -1161,10 +1184,8 @@ function choosedisk(){
 					;;
 	    	esac
 	fi
-	#choosepartition
-	#if [ $sd <> 0 ]; then
-	#cfdisk $sd
-	#fi
+	break
+done
 }
 
 function sh_umountpartition(){
@@ -1243,6 +1264,15 @@ function choosepartition(){
 	#sh_mountpartition
 }
 
+function sh_mkswap(){
+	local result=$(fdisk $sd -l | grep swap | cut -c1-11)
+	xPARTSWAP=$result
+
+	if [ "$result" != "" ] ; then
+		xUUIDSWAP=$(mkswap $result | grep UUID | awk '{print $3 }')
+	fi
+}
+
 function sh_format(){
 	# deseja formatar?
 	sh_checkpartition
@@ -1260,6 +1290,7 @@ function sh_format(){
 	        mkfs -F -t ext4 -L "MAZONOS" $part > /dev/null 2>&1
 			local nfmt=$?
 			if [ $nfmt = 0 ] ; then
+				sh_mkswap
 				alerta "MKFS" "$cmsg_mkfs_ok"
 				LFORMAT=1
 			else
@@ -1431,6 +1462,7 @@ function pt_BR(){
 	cdisco="DISCO"
 	cparticao="PARTIÇÃO"
 	cmsg_extracting="Aguarde, extraindo arquivos..."
+	cmsg_part_disk="Visualizar partições do disco"
 }
 
 function en_US(){
@@ -1550,10 +1582,12 @@ function en_US(){
 	cdisco="DISK"
 	cparticao="PARTITION"
 	cmsg_extracting="Wait, Extracting files..."
+	cmsg_part_disk="View disk partitions"
 }
 
 function scrend(){
 	#info "By"
+	clear
 	exit $1
 }
 
@@ -1674,7 +1708,8 @@ sh_tools(){
 		        2 "$cfstabinst"						  						\
 		        3 "$cinitbind"												\
 		        4 "$cconfuser"												\
-		        5 "$cpackagedisp"											)
+		        5 "$cpackagedisp"											\
+		        6 "$cmsg_part_disk"											)
 
 				exit_status=$?
 				case $exit_status in
@@ -1694,6 +1729,7 @@ sh_tools(){
 					3) STANDALONE=$true; sh_bind;;
 					4) STANDALONE=$true; sh_confadduser;;
 					5) sh_packagedisp;;
+					6) choosedisk "SEE";;
 				esac
 	done
 }
