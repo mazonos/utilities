@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #################################################################
-#       install dialog Mazon OS - version 1.0.1			        #
+#       install dialog Mazon OS - version 1.0.15-20190306       #
 #								                                #
 #      @utor: Diego Sarzi	    <diegosarzi@gmail.com>          #
 #             Vilmar Catafesta 	<vcatafesta@gmail.com>	    	#
@@ -108,14 +108,14 @@ CURS_ZERO="\\033[0G"
 
 # vars
 declare -i ok=$true
-declare -i grafico=$true
+declare -i grafico=$false
 declare -r cshell="/bin/bash"
 declare -r calias="mazonos"
 declare -r cnick="mazon"
 declare -r chome="/home"
 declare -r capp="install-mazon"
 declare -r cdistro="MazonOS"
-declare -r version="v1.0.1"
+declare -r version="v1.0.15-20190306"
 declare -r ccabec="$cdistro Linux installer $version"
 declare -r ctitle="$cdistro Linux"
 declare -r welcome="Welcome to the $ccabec"
@@ -320,7 +320,7 @@ function confirma(){
 }
 
 function msg(){
-    if [ $grafico = $true ]; then
+    if [ $grafico -eq $true ]; then
         dialog              \
         --no-collapse       \
         --title     "$1"    \
@@ -333,11 +333,11 @@ function msg(){
 }
 
 function mensagem(){
-	dialog							\
-   		--title 	"$ctitle"			\
-		--backtitle	"$ccabec"			\
-	   	--infobox 	"$*"				\
-	    6 60
+    dialog                  \
+   	--title 	"$ctitle"   \
+	--backtitle	"$ccabec"   \
+	--infobox 	"$*"        \
+    6 60
 }
 
 function tolower(){
@@ -435,6 +435,7 @@ function sh_choosepackage(){
 		tarball_full="${pkt[0]}"
 		sha256_full="${pkt[0]}.sha256sum"
     fi
+    rm -r index.html
 	return 0
 }
 
@@ -660,6 +661,8 @@ function grubinstall(){
 		mensagem "$cmsgwaitgrub: \n\n$sd"
 	    chroot . /bin/bash -c "grub-install $sd" > /dev/null 2>&1
 		chroot . /bin/bash -c "grub-mkconfig -o /boot/grub/grub.cfg" > /dev/null 2>&1
+        echo "set menu_color_normal=green/black"  >> $dir_install/boot/grub/grub.cfg 2> /dev/null
+        echo "set menu_color_highlight=white/red" >> $dir_install/boot/grub/grub.cfg 2> /dev/null
 	    alerta "*** GRUB *** " "$cgrubsuccess"
 	else
 		info "\n$ccancelgrub"
@@ -1177,11 +1180,11 @@ do
 					local nb=$?
 					case $nb in
 						$D_OK)
-							local xMEMSWAP=$(free -h | grep Mem | awk '{ print $2}' | cut -d"i" -f1)
+							#local xMEMSWAP=$(free -h | grep Mem | awk '{ print $2}' | cut -d"i" -f1)
+							local xMEMSWAP=$(free | grep Mem | awk '{ print $2}')
 							if [ $xMEMSWAP = "" ] ; then
 								xMEMSWAP = "2G" ]
 							fi
-
 							#echo "label: dos" | echo ";" | sfdisk --force $sd > /dev/null 2>&1
 							echo "label: gpt" | sfdisk --force $sd > /dev/null 2>&1
 							echo "size=1M, type=$nBIOS"  | sfdisk -a --force $sd > /dev/null 2>&1
@@ -1406,9 +1409,10 @@ function pt_BR(){
 	cconfuser="Configurar usuario e senha"
 	cconfusernow="Configurar usuário e senha agora"
 	ccreatenewuser="Criar um novo usuário"
-	cGrubMsgInstall="Você gostaria de instalar o GRUB? \
-					\n\n*Lembrando que ainda não temos suporte a dual boot. \
-					\nSe precisar de dual boot, use o grub de outra distribuição com:\n# update-grub"
+	#cGrubMsgInstall="Você gostaria de instalar o GRUB? \
+	#				\n\n*Lembrando que ainda não temos suporte a dual boot. \
+	#				\nSe precisar de dual boot, use o grub de outra distribuição com:\n# update-grub"
+	cGrubMsgInstall="Você gostaria de instalar o GRUB?"
 	cchooseX="Escolha o seu ambiente de Desktop:"
 	cxfce4="Clássico e poderoso!"
 	ci3wm="Desktop para caras avançados B)."
@@ -1526,9 +1530,10 @@ function en_US(){
 	cconfuser="Configure user and password"
 	cconfusernow="Configure user and password now"
 	ccreatenewuser="Create a new user"
-	cGrubMsgInstall="Would you like to install grub? \
-					\n\n*Remembering that we do not yet have dual boot support. \
-					\nIf use dualboot, use the grub from its other distribution with:\n# update-grub"
+	#cGrubMsgInstall="Would you like to install grub? \
+    #  				\n\n*Remembering that we do not yet have dual boot support. \
+    #				\nIf use dualboot, use the grub from its other distribution with:\n# update-grub"
+	cGrubMsgInstall="Would you like to install grub?"
 	cchooseX="Choose your Desktop Environment:"
 	cxfce4="Classic and powerfull!"
 	ci3wm="Desktop for avanced guys B)."
@@ -1611,7 +1616,9 @@ function sh_checkroot(){
 }
 
 function sh_testdialog(){
+    local xswap_grafico=$grafico
 	grafico=$false
+    clear
 	cinfo=`log_info_msg "Wait, verifying dialog..."`
     msg "INFO" "$cinfo"
     test -e /usr/bin/dialog > /dev/null 2>&1
@@ -1622,7 +1629,7 @@ function sh_testdialog(){
 		echo "Voce deve instalar o pacote dialog para executar o $capp!"
 		scrend 1
 	fi
-	grafico=$true
+	grafico=$xswap_grafico
 }
 
 
@@ -1632,8 +1639,8 @@ function init(){
 	while true; do
 		i18=$(dialog													\
 			--stdout                                                  	\
-			--backtitle	 	"$ccabec"				\
-			--title 		"$welcome"				\
+			--backtitle	 	"$ccabec"				                    \
+			--title 		"$welcome"				                    \
 			--cancel-label	"Exit"	 									\
 	        --menu			'\nChoose the language of the installer:'	\
 	        0 80 0                                 						\
@@ -1644,10 +1651,11 @@ function init(){
 			exit_status=$?
 			case $exit_status in
 				$ESC)
+                    clear
 					scrend 1
-					exit 1
 					;;
 				$CANCEL)
+                    clear
 					scrend 0
 					;;
 			esac
@@ -1676,11 +1684,12 @@ function sh_packagedisp(){
 	sh_delpackageindex
 	sh_wgetpackageindex
 
-    pkt=($(cat index.html \
-        | grep .xz \
-        | awk '{print $2, $5}' \
-        | sed 's/<a href=\"//g' \
-        | cut -d'"' -f3 | sed 's/>//g' \
+    pkt=($(cat index.html               \
+        | grep .xz                      \
+        | awk '{print $2, $5}'          \
+        | sed 's/<a href=\"//g'         \
+        | cut -d'"' -f3                 \
+        | sed 's/>//g'                  \
         | sed 's/<\/a//g' ))
 
      sd=$(dialog 				                                \
