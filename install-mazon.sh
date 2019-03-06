@@ -1,12 +1,12 @@
 #!/bin/bash
 #
-################################################################
-#       install dialog Mazon OS - version 1.0					#
-#                                                     			#
-#      @utor: Diego Sarzi 			<diegosarzi@gmail.com>		#
-#             Vilmar Catafesta 		<vcatafesta@gmail.com>		#
-#      created: 2019/02/15          licence: MIT				#
-#      altered: 2019/02/17-25       licence: MIT				#
+#################################################################
+#       install dialog Mazon OS - version 1.0.1			        #
+#								                                #
+#      @utor: Diego Sarzi	    <diegosarzi@gmail.com>          #
+#             Vilmar Catafesta 	<vcatafesta@gmail.com>	    	#
+#      created: 2019/02/15	    licence: MIT		            #
+#      altered: 2019/02/17-25	licence: MIT			        #
 #################################################################
 
 #. /lib/lsb/init-functions
@@ -19,13 +19,11 @@
 : ${D_ITEM_HELP=4}
 : ${D_ESC=255}
 
-# type
+# sfdisk type
 nEFI=1
 nBIOS=4
 nSWAP=19
 nLINUX=20
-# echo "label: dos" | echo "size=50M, type=20" | sfdisk -a --force /dev/sdc
-
 
 trancarstderr=2>&-
 true=0
@@ -41,25 +39,6 @@ CANCEL=1
 ESC=255
 HEIGHT=0
 WIDTH=0
-
-# flag para disco/particao/formatacao/montagem
-: ${LDISK=0}
-: ${LPARTITION=0}
-: ${LFORMAT=0}
-: ${LMOUNT=0}
-: ${TARSUCCESS=$false}
-: ${STANDALONE=$false}
-: ${STARTXFCE4=$true}
-: ${xUUIDSWAP=""}
-: ${xPARTSWAP=""}
-
-# usuario/senha/hostmame
-cuser=""
-cpass=""
-cshell="/bin/bash"
-chost="mazonos"
-cgroups="audio,video,netdev"
-chome="/home"
 
 NORMAL="\\033[0;39m"         # Standard console grey
 SUCCESS="\\033[1;32m"        # Success is green
@@ -109,22 +88,51 @@ SET_WCOL="\\033[${WCOL}G"    # at the $WCOL char
 CURS_UP="\\033[1A\\033[0G"   # Up one line, at the 0'th char
 CURS_ZERO="\\033[0G"
 
+# flag para disco/particao/formatacao/montagem
+: ${LDISK=0}
+: ${LPARTITION=0}
+: ${LFORMAT=0}
+: ${LMOUNT=0}
+: ${TARSUCCESS=$false}
+: ${STANDALONE=$false}
+: ${STARTXFCE4=$true}
+: ${xUUIDSWAP=""}
+: ${xPARTSWAP=""}
+: ${xLABEL="MAZONOS"}
+
+# usuario/senha/hostmame/group
+: ${cuser=""}
+: ${cpass=""}
+: ${chost="mazonos"}
+: ${cgroups="audio,video,netdev"}
+
 # vars
+declare -i ok=$true
 declare -i grafico=$true
-declare -i ok=0
-declare -r ccabec="MazonOS Linux installer v1.0"
-declare -r dir_install="/mnt/mazon"
-declare -r site="mazonos.com"
-declare -r url_mazon="http://mazonos.com/releases/"
-declare -r tarball_min="mazon_minimal-0.3.tar.xz"
-declare -r sha256_min="mazon_minimal-0.3.tar.xz.sha256sum"
-declare -r tarball_full="mazon_beta-1.2.tar.xz"
-declare -r sha256_full="mazon_beta-1.2.tar.xz.sha256sum"
-FULLINST=$true
-tarball_default=$tarball_full
-sha256_default=$sha256_full
+declare -r cshell="/bin/bash"
+declare -r calias="mazonos"
+declare -r cnick="mazon"
+declare -r chome="/home"
+declare -r capp="install-mazon"
+declare -r cdistro="MazonOS"
+declare -r version="v1.0.1"
+declare -r ccabec="$cdistro Linux installer $version"
+declare -r ctitle="$cdistro Linux"
+declare -r welcome="Welcome to the $ccabec"
+declare -r site="$chost.com"
+declare -r xemail="root@$site"
+declare -r dir_install="/mnt/$chost"
+declare -r url_distro="http://$site/releases/"
+declare -r tarball_min=$cnick"_minimal-0.3.tar.xz"
+declare -r sha256_min=$cnick"_minimal-0.3.tar.xz.sha256sum"
+declare -r tarball_full=$cnick"_beta-1.2.tar.xz"
+declare -r sha256_full=$cnick"_beta-1.2.tar.xz.sha256sum"
 declare -r pwd=$PWD
 declare -r cfstab=$dir_install"/etc/fstab"
+: ${FULLINST=$true}
+: ${tarball_default=$tarball_full}
+: ${sha256_default=$sha256_full}
+
 declare -r wiki=$(cat << _WIKI
 Wiki
 There are two ways to install, with the install-mazon.sh (dep dialog) script or the manual form as follows:
@@ -183,7 +191,6 @@ Add a password with:
 Log in to the system with your new user and password, startx to start.
 _WIKI
 )
-
 
 # lib functions script
 
@@ -326,8 +333,8 @@ function msg(){
 }
 
 function mensagem(){
-	dialog								\
-   		--title 	'MazonOS Linux'		\
+	dialog							\
+   		--title 	"$ctitle"			\
 		--backtitle	"$ccabec"			\
 	   	--infobox 	"$*"				\
 	    6 60
@@ -444,7 +451,7 @@ function sh_delpackageindex(){
 function sh_wgetpackageindex(){
     ret=`log_info_msg "$cmsg_wget_package_index"`
     msg "INFO" "$ret"
-    wget $url_mazon > /dev/null 2>&1
+    wget $url_distro > /dev/null 2>&1
     evaluate_retval
     return $?
 }
@@ -467,7 +474,7 @@ function sh_delsha256sum(){
 
 function sh_wgetsha256sum(){
 	sh_delsha256sum
-	clinksha=$url_mazon$sha256_default
+	clinksha=$url_distro$sha256_default
     ret=`log_info_msg "$cmsggetshasum"`
     msg "INFO" "$ret"
     wget -q $clinksha > /dev/null 2>&1
@@ -495,7 +502,7 @@ function sh_testsha256sum(){
 function sh_confhost(){
 	cinfo=`log_info_msg "$cmsgaddhost"`
     msg "INFO" "$cinfo"
-	if [ "$chost" != "mazonos" ]; then
+	if [ "$chost" != "$calias" ]; then
 		echo $chost > $dir_install/etc/hostname
 	    return $?
 	fi
@@ -714,7 +721,7 @@ function sh_finish(){
 }
 
 function sh_wgettarball(){
-	local URL=$url_mazon$tarball_default
+	local URL=$url_distro$tarball_default
 
 	wget -c $URL 2>&1 														\
 	| stdbuf -o0 awk '/[.] +[0-9][0-9]?[0-9]?%/ { print substr($0,63,3) }' 	\
@@ -740,8 +747,8 @@ function sh_wgetdefault(){
 		sha256_default=$sha256_min
 	fi
 
-	local URL=$url_mazon$tarball_default
-	local clinksha=$url_mazon$sha256_default
+	local URL=$url_distro$tarball_default
+	local clinksha=$url_distro$sha256_default
 	local sumtest=$false
 
 	test -e $tarball_default
@@ -804,7 +811,7 @@ function sh_wgetdefault(){
 	fi
 
 	if [ $sumtest = $false ]; then
-		conf "$cmsg005" "\n$cmsgversion" # Você gostaria de baixar o MazonOS minimal?'
+		conf "$cmsg005" "\n$cmsgversion"
 		local nchoice=$?
 		case $nchoice in
 			$D_OK)
@@ -1292,7 +1299,7 @@ function sh_format(){
 	    	# WARNING! FORMAT PARTITION
 		    #######################
 			umount -rl $part 2> /dev/null
-	        mkfs -F -t ext4 -L "MAZONOS" $part > /dev/null 2>&1
+	        mkfs -F -t ext4 -L "$xLABEL" $part > /dev/null 2>&1
 			local nfmt=$?
 			if [ $nfmt = 0 ] ; then
 				sh_mkswap
@@ -1353,9 +1360,9 @@ function pt_BR(){
 	lang="pt_BR"
 	buttonback="Voltar"
 	cmsg000="Sair"
-	cmsg001="MazonOS Linux INSTALL v1.0"
-	cmsg002="MazonOS Linux"
-	cmsg003="Bem-vindo ao instalador do MazonOS"
+	cmsg001=$ccabec
+	cmsg002=$ctitle
+	cmsg003="Bem-vindo ao instalador do $cdistro"
 	cmsg004="Escolha uma opção:"
 	cmsg005="Baixar pacote de instalacao"
 	cmsg006="Particionar Disco"
@@ -1370,8 +1377,8 @@ function pt_BR(){
 	cnewbie="Novato"
 	cmsg013="Particionamento automatico (sfdisk)"
 	cmsg014="Tem certeza?"
-	cmsg015='A versão mínima não inclui o Xorg e DE.\nVocê gostaria de baixar o MazonOS minimal?'
-	cmsg016='Você gostaria de baixar o MazonOS full?'
+	cmsg015="A versão mínima não inclui o Xorg e DE.\nVocê gostaria de baixar o $cdistro minimal?"
+	cmsg016="Você gostaria de baixar o $cdistro full?"
 	cmsg017='Download cancelado!'
 	cancelinst="Instalacao cancelada!"
 	cancelbind="Chroot cancelado!"
@@ -1390,7 +1397,7 @@ function pt_BR(){
 	cdlok4="\n\nIniciar a instalação agora?"
 	cshaok="\n[ok] Checksum verificado com sucesso."
     plswait="Por favor aguarde, baixando pacote..."
-	cfinish="Instalação completa! Boas vibes.\nReboot para iniciar com MazonOS Linux. \n\nEnviar bugs root@mazonos.com"
+	cfinish="Instalação completa! Boas vibes.\nReboot para iniciar com $cdistro Linux.\n\nBugs? $xmail"
 	cgrubsuccess="OK! GRUB instalado com sucesso!"
 	ccancelgrub="Instalação do GRUB cancelada!"
 	cgrubinst="Instalar GRUB"
@@ -1430,9 +1437,9 @@ function pt_BR(){
 	cerrotar78="(ENAMETOOLONG) - cwd name muito longo"
 	cerrotar171="(ETOAST) – unidade de fitas on fire"
 	ctools="Ferramentas/Configurações"
-	cmsgtestarota="Aguarde, testando rota para o servidor MazonOS..."
+	cmsgtestarota="Aguarde, testando rota para o servidor $cdistro..."
 	cmsgdelsha256="Aguarde, excluindo SHA256SUM antigo..."
-	cmsgusermanager="Gerenciamento de usuários MazonOS Linux"
+	cmsgusermanager="Gerenciamento de usuários $cdistro Linux"
 	cpackagedisp="Pacotes disponiveis"
     cmsggetshasum="Aguarde, baixando sha256sum novo..."
 	cmsgdelpackageindex="Aguarde, excluindo indice antigo..."
@@ -1442,7 +1449,7 @@ function pt_BR(){
 	cmsgaddhost="Aguarde, setando hostname..."
     cmsgerrotar="Erro na descompatacao do pacote"
 	cmsgwaitgrub="Aguarde, instalando o GRUB no disco"
-	cmsgnoroute="Ops, sem rota para o servidor da MazonOS!\nVerifique sua internet."
+	cmsgnoroute="Ops, sem rota para o servidor da $cdistro!\nVerifique sua internet."
 	cmsgerrodlsha1="Ops, erro no download de !\nVerifique sua internet."
 	cmsgerrodlsha2="Verifique sua internet."
 	cmsgcorrdlnew="Ops, Pacote corrompido. Baixar novamente o pacote?"
@@ -1474,9 +1481,9 @@ function en_US(){
 	lang="en_US"
 	buttonback="Back"
 	cmsg000="Exit"
-	cmsg001="MazonOS Linux INSTALL v1.0"
-	cmsg002="MazonOS Linux"
-	cmsg003="Welcome to the MazonOS installer"
+	cmsg001=$ccabec
+	cmsg002=$ctitle
+	cmsg003=$welcome
 	cmsg004="Choose an option:"
 	cmsg005="Download installation package"
 	cmsg006="Partition Disk"
@@ -1491,8 +1498,8 @@ function en_US(){
 	cnewbie="Newbie"
 	cmsg013="Automatic partitioning (sfdisk)"
 	cmsg014="Are you sure?"
-	cmsg015='The minimum version does not include Xorg and DE. \nWould you like to download MazonOS minimal?'
-	cmsg016='Would you like to download MazonOS full?'
+	cmsg015="The minimum version does not include Xorg and DE. \nWould you like to download $cdistro minimal?"
+	cmsg016='Would you like to download $cdistro full?'
 	cmsgversion=$cmsg015
 	cmsg017='Download canceled!'
 	cancelinst="Installation canceled!"
@@ -1510,7 +1517,7 @@ function en_US(){
 	cdlok4="\n\nStart the installation now?"
 	cshaok="\n[ok] Checksum successfully verified."
     plswait="Please wait, Downloading package..."
-	cfinish="Install Complete! Good vibes. \nReboot to start with MazonOS Linux. \n\nSend bugs - root@mazonos.com"
+	cfinish="Install Complete! Good vibes. \nReboot to start with $cdistro Linux. \n\nBugs? $xemail"
 	cgrubsuccess="OK! GRUB successfully installed!"
 	ccancelgrub="Installing grub canceled!"
 	cgrubinst="Install GRUB"
@@ -1550,9 +1557,9 @@ function en_US(){
 	cerrotar78="(ENAMETOOLONG) - cwd name muito longo"
 	cerrotar171="(ETOAST) – unidade de fitas on fire"
 	ctools="Tools/Settings"
-	cmsgtestarota="Please wait, testing route to the MazonOS server..."
+	cmsgtestarota="Please wait, testing route to the $cdistro server..."
 	cmsgdelsha256="Please wait, deleting old SHA256SUM..."
-	cmsgusermanager="MazonOS Linux user management"
+	cmsgusermanager="$cdistro Linux user management"
 	cpackagedisp="Available packages"
     cmsggetshasum="Please wait, download sha256sum new..."
 	cmsgdelpackageindex="Please wait, deleting old index..."
@@ -1562,7 +1569,7 @@ function en_US(){
 	cmsgaddhost="Please wait, setting hostname..."
     cmsgerrotar="Error in package unpacking"
 	cmsgwaitgrub="Please wait, installing grub to disk"
-	cmsgnoroute="Oops, no route to the MazonOS server! \nCheck your internet."
+	cmsgnoroute="Oops, no route to the $cdistro server! \nCheck your internet."
 	cmsgerrodlsha1="Ops, error downloading of"
 	cmsgerrodlsha2="Check your internet."
 	cmsgcorrdlnew="Ops, corrupted package. Download the package again?"
@@ -1592,13 +1599,13 @@ function en_US(){
 
 function scrend(){
 	#info "By"
-	clear
+	#clear
 	exit $1
 }
 
 function sh_checkroot(){
 	if [ "$(id -u)" != "0" ]; then
-		alerta "MazonOS Linux installer" "\nYou should run this script as root!"
+		alerta "$cdistro Linux installer" "\nYou should run this script as root!"
 		scrend 0
 	fi
 }
@@ -1611,8 +1618,8 @@ function sh_testdialog(){
     evaluate_retval
 
 	if [ $? = $false ]; then
-		echo "You must install the dialog package to run install-mazon"
-		echo "Voce deve instalar o pacote dialog para executar o install-mazon!"
+		echo "You must install the dialog package to run $capp"
+		echo "Voce deve instalar o pacote dialog para executar o $capp!"
 		scrend 1
 	fi
 	grafico=$true
@@ -1625,8 +1632,8 @@ function init(){
 	while true; do
 		i18=$(dialog													\
 			--stdout                                                  	\
-			--backtitle	 	"MazonOS Linux installer v1.0"				\
-			--title 		'Welcome to the MazonOS installer'			\
+			--backtitle	 	"$ccabec"				\
+			--title 		"$welcome"				\
 			--cancel-label	"Exit"	 									\
 	        --menu			'\nChoose the language of the installer:'	\
 	        0 80 0                                 						\
@@ -1654,7 +1661,7 @@ function init(){
 					scrmain
 					;;
 				3)
-					dialog --no-collapse --title "MazonOS Wiki" --msgbox "$wiki" 0 0
+					dialog --no-collapse --title "$cdistro Wiki" --msgbox "$wiki" 0 0
 					;;
 			esac
 	done
