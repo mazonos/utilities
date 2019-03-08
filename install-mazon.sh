@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #################################################################
-#       install dialog Mazon OS - version 1.1.23-20190308       #
+#       install dialog Mazon OS - version 1.2.08-20190308       #
 #								                                #
 #      @utor: Diego Sarzi	    <diegosarzi@gmail.com>          #
 #             Vilmar Catafesta 	<vcatafesta@gmail.com>	    	#
@@ -117,20 +117,20 @@ declare -r cnick="mazon"
 declare -r chome="/home"
 declare -r capp="install-mazon"
 declare -r cdistro="MazonOS"
-declare -r version="v1.1.23-20190308"
+declare -r version="v1.2.08-20190308"
 declare -r ccabec="$cdistro Linux installer $version"
 declare -r ctitle="$cdistro Linux"
 declare -r welcome="Welcome to the $ccabec"
 declare -r site="$chost.com"
-declare -r xemail="root@$site"
+declare -r xemail="root@mazonos.com"
 declare -r dir_install="/mnt/$chost"
 declare -r url_distro="http://$site/releases/"
 declare -r pwd=$PWD
 declare -r cfstab=$dir_install"/etc/fstab"
 : ${tarball_min=$cnick"_minimal-0.3.tar.xz"}
 : ${sha256_min=$cnick"_minimal-0.3.tar.xz.sha256sum"}
-: ${tarball_full=$cnick"_beta-1.2.tar.xz"}
-: ${sha256_full=$cnick"_beta-1.2.tar.xz.sha256sum"}
+: ${tarball_full=$cnick"_beta-1.3.tar.xz"}
+: ${sha256_full=$cnick"_beta-1.3.tar.xz.sha256sum"}
 : ${FULLINST=$true}
 : ${tarball_default=$tarball_full}
 : ${sha256_default=$sha256_full}
@@ -359,7 +359,9 @@ function display_result() {
 	fi
 
 	dialog 	--title 	"$2"			\
+            --beep                      \
     		--no-collapse				\
+            --no-cr-wrap                \
 			--backtitle	"$xbacktitle"	\
     		--msgbox 	"$1" 			\
 			25 80
@@ -446,7 +448,7 @@ function sh_choosepackage(){
 function sh_delpackageindex(){
     ret=`log_info_msg "$cmsgdelpackageindex"`
     msg "INFO" "$ret"
-    rm index.html* > /dev/null 2>&1
+    rm -f index.html* > /dev/null 2>&1
     evaluate_retval
     return $?
 
@@ -471,7 +473,7 @@ function sh_testarota(){
 function sh_delsha256sum(){
     cinfo=`log_info_msg "$cmsgdelsha256"`
 	msg "INFO" "$info"
-    rm -f $sha256_default > /dev/null 2>&1
+    rm -f $sha256_default* > /dev/null 2>&1
     evaluate_retval
     return $?
 }
@@ -489,7 +491,7 @@ function sh_wgetsha256sum(){
 function sh_deltarball(){
     cinfo=`log_info_msg "$cmsgdeltarball"`
     msg "INFO" "$info"
-    rm -f $tarball_default > /dev/null 2>&1
+    rm -f $tarball_default* > /dev/null 2>&1
     evaluate_retval
     return $?
 }
@@ -721,8 +723,10 @@ function grubinstall(){
                 mensagem "Montando partição: $xPARTEFI"
     	        mount $xPARTEFI $dir_install/boot/EFI 2> /dev/null
                 mensagem "Instalando GRUB EFI na partição: $xPARTEFI"
-            	chroot . /bin/bash -c "grub-install \
-                                        --target=x86_64-efi --bootloader-id=mazon \
+            	chroot . /bin/bash -c "grub-install                 \
+                                        --target=x86_64-efi         \
+                                        --efi-directory=/boot/EFI   \
+                                        --bootloader-id=mazon       \
                                         --recheck">/dev/null 2>&1
             else
                 mensagem "Instalando GRUB no disco: $sd"
@@ -783,6 +787,8 @@ function sh_fstab(){
 
 	if [ $STANDALONE = $true ]; then
 		nano $cfstab
+		local result=$( cat $cfstab )
+		display_result "$result" "$cfstab"
 		STANDALONE=$false
 	else
 		local result=$( cat $cfstab )
@@ -888,7 +894,7 @@ function sh_wgetdefault(){
 	fi
 
 	if [ $sumtest = $false ]; then
-		confmult "$cmsgdlpkginst" "\n$cmsgversion" "\n$tarball_default"
+		conf "$cmsgdlpkginst" "\n$cmsgversion"
 		local nchoice=$?
 		case $nchoice in
 			$D_OK)
@@ -925,7 +931,7 @@ function sh_wgetdefault(){
 	   	fmazon=$( dialog --stdout --fselect './' 6 40 )
 		quit
 	else
-		confmulti "$cdlok1" "$cdlok2" "\n[ok] $tarball_default $cdlok3" "$cshaok" "$cdlok4"
+		confmulti "$cdlok1" "$cdlok2" "\n[OK] $tarball_default $cdlok3" "$cshaok" "$cdlok4"
 		local ninit=$?
 		case $ninit in
 			$D_OK)
@@ -1262,7 +1268,7 @@ do
 							#echo "label: dos" | echo ";" | sfdisk --force $sd > /dev/null 2>&1
 							echo "label: gpt" | sfdisk --force $sd > /dev/null 2>&1
 							echo "size=400M, type=$nEFI"   | sfdisk -a --force $sd > /dev/null 2>&1
-#							echo "size=1M, type=$nBIOS"  | sfdisk -a --force $sd > /dev/null 2>&1
+							echo "size=1M, type=$nBIOS"  | sfdisk -a --force $sd > /dev/null 2>&1
 							echo "size=$xMEMSWAP, type=$nSWAP"  | sfdisk -a --force $sd > /dev/null 2>&1
 							echo ";" | sfdisk -a --force $sd > /dev/null 2>&1
 							LDISK=1
@@ -1470,10 +1476,10 @@ function pt_BR(){
 	yeslabel="Sim"
 	nolabel="Não"
 	cdlok1="*** DOWNLOAD *** "
-	cdlok2="\n[ok] Download concluído com sucesso."
+	cdlok2="\n[OK] Download concluído com sucesso."
 	cdlok3="encontrado."
 	cdlok4="\n\nIniciar a instalação agora?"
-	cshaok="\n[ok] Checksum verificado com sucesso."
+	cshaok="\n[OK] Checksum verificado com sucesso."
     plswait="Por favor aguarde, baixando pacote..."
 	cfinish="Instalação completa! Boas vibes.\nReboot para iniciar com $cdistro Linux.\n\nBugs? $xmail"
 	cgrubsuccess="GRUB instalado com sucesso!"
@@ -1591,10 +1597,10 @@ function en_US(){
 	yeslabel="Yes"
 	nolabel="No"
 	cdlok1="*** DOWNLOAD ***"
-	cdlok2="\n[ok] Download completed successfully."
+	cdlok2="\n[OK] Download completed successfully."
 	cdlok3="found."
 	cdlok4="\n\nStart the installation now?"
-	cshaok="\n[ok] Checksum successfully verified."
+	cshaok="\n[OK] Checksum successfully verified."
     plswait="Please wait, Downloading package..."
 	cfinish="Install Complete! Good vibes. \nReboot to start with $cdistro Linux. \n\nBugs? $xemail"
 	cgrubsuccess="GRUB successfully installed!"
