@@ -19,6 +19,9 @@
 : ${D_ITEM_HELP=4}
 : ${D_ESC=255}
 
+#hex codigo
+barra=$'\x5c'
+
 # sfdisk type
 nEFI=1
 nBIOS=4
@@ -196,6 +199,40 @@ _WIKI
 )
 
 # lib functions script
+function police(){
+    echo "................_@@@__"
+    echo "..... ___//___?____\________"
+    echo "...../--o--POLICE------@} ...."
+}
+
+function inkey(){
+    #read -rsp $'Press enter to continue...\n'
+    #read -rsp $'Press escape to continue...\n' -d $'\e'
+    #read -rsp $'Press any key to continue...\n' -n 1 key
+    # echo $key
+    #read -rp $'Are you sure (Y/n) : ' -ei $'Y' key;
+    # echo $key
+    #read -rsp $'Press any key or wait 5 seconds to continue...\n' -n 1 -t 5;
+    #read -rst 0.5; timeout=$?
+    # echo $timeout
+    #read -rsp $'' -n 1 -t 5;
+    #read -n1 -r -p "" lastkey ; timeout=$?
+    read -t "$1" -n1 -r -p "" lastkey
+}
+
+function sh_partitions(){
+    array=($(fdisk -l $sd           \
+    | grep "$sd[0-9]"               \
+    | awk '{print $1,$5,$6,$7}'     \
+    | sed 's/ /_/'g                 \
+    | sed 's/.//10'                 \
+    | sed 's/./& /9'))
+}
+
+function arraylen(){
+    #arraylength=${#array[@]}
+    arraylength=${#"$1"[@]}
+}
 
 function timespec()
 {
@@ -714,27 +751,46 @@ function grubinstall(){
         sh_efi
 
         if [ $lEFI = $true ]; then
-            conf "** EFI **" "Detectada particao EFI: $xPARTEFI \nDeseja instalar o GRUB EFI?\n\nSim=EFI Nao=MBR"
+            conf "** EFI **"                                \
+                "$cmsg_Detectada_particao_EFI: $xPARTEFI    \
+                \n$cmsg_Deseja_instalar_o_GRUB_EFI?         \
+                \n\n$cmsg_Sim_EFI \n$cmsg_Nao_MBR"
+
             if [ $? = $true ] ; then
-                mensagem "Desmontando partição: $xPARTEFI"
+                cinfo=`log_info_msg "$cmsg_Desmontando_particao: $sd"`
+                msg "INFO" "$cinfo"
                 umount -f -rl $xPARTEFI 2> /dev/null
-                mensagem "Formatando partição: $xPARTEFI"
+                evaluate_retval
+
+                cinfo=`log_info_msg "$cmsg_Formatando_particao: $sd"`
+                msg "INFO" "$cinfo"
                 mkfs.fat -F32 $xPARTEFI 2> /dev/null
-                mensagem "Montando partição: $xPARTEFI"
+                evaluate_retval
+
+                cinfo=`log_info_msg "$cmsg_Montando_particao: $sd"`
+                msg "INFO" "$cinfo"
     	        mount $xPARTEFI $dir_install/boot/EFI 2> /dev/null
-                mensagem "Instalando GRUB EFI na partição: $xPARTEFI"
+                evaluate_retval
+
+                cinfo=`log_info_msg "$cmsg_Instalando_GRUB_EFI_na_particao: $sd"`
+                msg "INFO" "$cinfo"
             	chroot . /bin/bash -c "grub-install                 \
                                         --target=x86_64-efi         \
                                         --efi-directory=/boot/EFI   \
                                         --bootloader-id=mazon       \
                                         --recheck">/dev/null 2>&1
+                evaluate_retval
             else
-                mensagem "Instalando GRUB no disco: $sd"
+                cinfo=`log_info_msg "$cmsg_install_grub_disk: $sd"`
+                msg "INFO" "$cinfo"
                 chroot . /bin/bash -c "grub-install $sd" > /dev/null 2>&1
+                evaluate_retval
             fi
          else
-            mensagem "Instalando GRUB no disco: $sd"
+            cinfo=`log_info_msg "$cmsg_install_grub_disk: $sd"`
+            msg "INFO" "$cinfo"
             chroot . /bin/bash -c "grub-install $sd" > /dev/null 2>&1
+            evaluate_retval
         fi
 	    chroot . /bin/bash -c "grub-mkconfig -o /boot/grub/grub.cfg" > /dev/null 2>&1
         echo "set menu_color_normal=green/black"  >> $dir_install/boot/grub/grub.cfg 2> /dev/null
@@ -1260,17 +1316,21 @@ do
 					local nb=$?
 					case $nb in
 						$D_OK)
+                        	cinfo=`log_info_msg "$cmsg_prepare_disk $sd"`
+                            msg "INFO" "$cinfo"
 							#local xMEMSWAP=$(free -h | grep Mem | awk '{ print $2}' | cut -d"i" -f1)
 							local xMEMSWAP=$(free | grep Mem | awk '{ print $2}')
 							if [ $xMEMSWAP = "" ] ; then
 								xMEMSWAP = "2G" ]
 							fi
+                            sfdisk -f --delete $sd > /dev/null 2>&1
 							#echo "label: dos" | echo ";" | sfdisk --force $sd > /dev/null 2>&1
 							echo "label: gpt" | sfdisk --force $sd > /dev/null 2>&1
-							echo "size=400M, type=$nEFI"   | sfdisk -a --force $sd > /dev/null 2>&1
-							echo "size=1M, type=$nBIOS"  | sfdisk -a --force $sd > /dev/null 2>&1
-							echo "size=$xMEMSWAP, type=$nSWAP"  | sfdisk -a --force $sd > /dev/null 2>&1
+							echo "size=400M, type=$nEFI" | sfdisk -a --force $sd > /dev/null 2>&1
+							echo "size=1M, type=$nBIOS" | sfdisk -a --force $sd > /dev/null 2>&1
+							echo "size=$xMEMSWAP, type=$nSWAP" | sfdisk -a --force $sd > /dev/null 2>&1
 							echo ";" | sfdisk -a --force $sd > /dev/null 2>&1
+                            evaluate_retval
 							LDISK=1
 							local result=$( fdisk -l $sd )
 						    display_result "$result" "$csmg013"
@@ -1332,14 +1392,37 @@ function choosepartition(){
 	#partitions=( $(ls $sd* | grep -o '/dev/sd[a-z][0-9]' | sed "s/$/ '*' /") )
 	LPARTITION=0
 	#partitions=( $(fdisk -l | cut -dk -f2 | grep -o /sd[a-z][0-9]))
-	partitions=( $(fdisk -l | sed -n /sd[a-z][0-9]/p | awk '{print $1,$5}'))
+   	#partitions=( $(fdisk -l $sd | sed -n /sd[a-z][0-9]/p | awk '{print $1,$5}'))
+    #partitions=($(fdisk $sd -o Device,Type,Size|sed -n /sd[a-z][0-9]/'s/  /+/p'|sed 's/ /_/'g|sed 's/+/ /g'))
+    #devices=($(fdisk -l -o Device|sed -n '/sd[a-z][0-9]/'p))
+    #partitions=($(fdisk -l|sed -n '/sd[a-z][0-9]/'p|awk '{printf "%0s [%0s]__%0s_%0s\n", $1,$5,$7,$6}'))
+    local array=()
+    local n=0
+    local y=0
+
+    if [ $LDISK -eq 0 ]; then
+        typesize=($(fdisk -l -o device,type,size | sed -n '/sd[a-z][0-9]/'p | sed 's/ /_/g'))
+        devices=($(fdisk -l -o Device|sed -n '/sd[a-z][0-9]/'p))
+        partitions=($(fdisk -l|sed -n '/sd[a-z][0-9]/'p|awk '{printf "%0s [%0s]__%0s_%0s\n", $1,$5,$7,$6}'))
+    else
+        typesize=($(fdisk -l $sd -o device,type,size | sed -n '/sd[a-z][0-9]/'p | sed 's/ /_/g'))
+        devices=($(fdisk -l $sd -o Device|sed -n '/sd[a-z][0-9]/'p))
+        partitions=($(fdisk -l $sd|sed -n '/sd[a-z][0-9]/'p|awk '{printf "%0s [%0s]__%0s_%0s\n", $1,$5,$7,$6}'))
+    fi
+
+    for i in ${devices[@]}
+    do
+        array[((n++))]=$i
+        array[((n++))]=${typesize[((y++))]}
+    done
+
 	part=$(dialog 														\
 			--title 		"$cparticao"					  			\
 			--backtitle	 	"$ccabec"					 				\
 			--cancel-label	"$buttonback"								\
 			--menu 			"\n$cmsg007:"								\
-			0 50 0 														\
-			"${partitions[@]}" 2>&1 >/dev/tty 							)
+			0 65 0 														\
+			"${array[@]}" 2>&1 >/dev/tty 							    )
 
 	exit_status=$?
 	case $exit_status in
@@ -1560,6 +1643,16 @@ function pt_BR(){
 	cparticao="PARTIÇÃO"
 	cmsg_extracting="Aguarde, extraindo arquivos..."
 	cmsg_part_disk="Visualizar partições do disco"
+    cmsg_prepare_disk="Aguarde, preparando o disco:"
+    cmsg_install_grub_disk="Instalando GRUB no disco"
+    cmsg_Detectada_particao_EFI="Detectada partição EFI"
+    cmsg_Deseja_instalar_o_GRUB_EFI="Deseja instalar o GRUB EFI"
+    cmsg_Sim_EFI="Sim=EFI"
+    cmsg_Nao_MBR="Não=MBR"
+    cmsg_Desmontando_particao="Desmontando partição"
+    cmsg_Formatando_particao="Formatando partição"
+    cmsg_Montando_particao="Montando partição"
+    cmsg_Instalando_GRUB_EFI_na_particao="Instalando GRUB EFI na partição"
 }
 
 function en_US(){
@@ -1681,6 +1774,16 @@ function en_US(){
 	cparticao="PARTITION"
 	cmsg_extracting="Wait, Extracting files..."
 	cmsg_part_disk="View disk partitions"
+    cmsg_prepare_disk="Wait, preparing the disk:"
+    cmsg_install_grub_disk="Installing grub on disk"
+    cmsg_Detectada_particao_EFI="Detected EFI partition"
+    cmsg_Deseja_instalar_o_GRUB_EFI="Do you want to install EFI grub"
+    cmsg_Sim_EFI="Yes=EFI"
+    cmsg_Nao_MBR="No=MBR"
+    cmsg_Desmontando_particao="Unmounting partition"
+    cmsg_Formatando_particao="Formatting partition"
+    cmsg_Montando_particao="Mounting partition"
+    cmsg_Instalando_GRUB_EFI_na_particao="Installing EFI grub on partition"
 }
 
 function scrend(){
