@@ -850,7 +850,7 @@ function grubinstall(){
         else
             sh_grubBIOS
         fi
-        sh_grubmkconfig()
+        sh_grubmkconfig
     	if [ $LAUTOMATICA = $false ]; then
     	    alerta "*** GRUB *** " "$sd" "\n\n$cgrubsuccess"
         fi
