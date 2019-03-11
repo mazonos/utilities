@@ -200,6 +200,7 @@ function sh_main(){
 
     log_info_msg "mkinitramfs $(uname -r)"
     mkinitramfs $(uname -r) 2> /dev/null
+    dracut -f
     evaluate_retval
 
     log_info_msg "cp -Rf $XHOME/* /etc/skel/"
@@ -246,10 +247,9 @@ function sh_main(){
     # Resta fazer só mais uma alteração. Para fazê-la, no entanto, precisamos sair do sistema de trabalho:
 
     echo -e ""
-    maxcol; replicate "=" $?
     log_info_msg "Saindo do AMBIENTE CHROOT"
     evaluate_retval
-
+    maxcol; replicate "=" $?
     exit
 }
 echo -e ""

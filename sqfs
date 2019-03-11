@@ -1,7 +1,10 @@
 #!/bin/bash
 
 : ${distro="mazonos"}
-: ${label="MAZONOS"}
+: ${MEDIALABEL="MAZONOS"}
+
+# Set to 32 to be more compatible with the specs.
+BOOTLOADSIZE=${BOOTLOADSIZE:-4}
 export XHOME=$HOME
 export BASE=$XHOME/$distro"-live"
 export LIVE=$XHOME/$distro"-live/cd/live"
@@ -14,6 +17,7 @@ export WORKPROC=$XHOME/$distro"-live/work/rootfs/proc"
 export WORKSYS=$XHOME/$distro"-live/work/rootfs/sys"
 export WORKMEDIA=$XHOME/$distro"-live/work/rootfs/media"
 export WORKTMP=$XHOME/$distro"-live/work/rootfs/tmp"
+OUTFILE=$XHOME"/live-cd.iso"
 
 NORMAL="\\033[0;39m"         # Standard console grey
 SUCCESS="\\033[1;32m"        # Success is green
@@ -202,23 +206,73 @@ function inkey(){
     read -t "$1" -n1 -r -p "" lastkey
 }
 
+function quit(){
+   	if [ $? != "0" ]; then
+		maxcol; replicate "=" $?
+		log_info_msg "Abortando ISO LIVE!!!!"; echo ""
+		maxcol; replicate "=" $?
+		evaluate_retval
+		exit
+	fi
+}
+
+function sh_unbind(){
+#    log_info_msg "umount -rl $WORKPTS"
+    umount -rl "$WORKPTS" 2> /dev/null
+#    evaluate_retval
+
+#    log_info_msg "umount -rl $WORKDEV"
+    umount -rl "$WORKDEV" 2> /dev/null
+#    evaluate_retval
+
+#    log_info_msg "umount -rl $WORKPROC"
+    umount -rl "$WORKPROC" 2> /dev/null
+#    evaluate_retval
+
+#    log_info_msg "umount -rl $WORKSYS"
+    umount -rl "$WORKSYS" 2> /dev/null
+#    evaluate_retval
+
+#    log_info_msg "umount -rl $WORKMEDIA"
+    umount -rl "$WORKMEDIA" 2> /dev/null
+#    evaluate_retval
+
+#    log_info_msg "umount -rl $WORKTMP"
+    umount -rl "$WORKTMP" 2> /dev/null
+#    evaluate_retval
+}
+
+function sh_bootopts(){
+	# Determine whether we add UEFI boot capabilities to the ISO:
+	if [ -f boot/syslinux/efiboot.img -a "$USEXORR" = "NO" ]; then
+		UEFI_OPTS="-eltorito-alt-boot -no-emul-boot -eltorito-platform 0xEF -eltorito-boot boot/syslinux/efiboot.img"
+	elif [ -f boot/syslinux/efiboot.img -a "$USEXORR" = "YES" ]; then
+    	UEFI_OPTS="-eltorito-alt-boot -e boot/syslinux/efiboot.img -no-emul-boot"
+	else
+    	UEFI_OPTS=""
+	fi
+}
 
 function sh_main(){
+	for i in {1..5}; do
+		sh_unbind
+	done
+
     log_info_msg "mkdir -p $LIVE"
     mkdir -p $LIVE
-    evaluate_retval
+    evaluate_retval; quit
 
     log_info_msg "mkdir -p $GRUB"
     mkdir -p $GRUB
-    evaluate_retval
+    evaluate_retval ; quit
 
     log_info_msg "mkdir -p $ISOLINUX"
     mkdir -p $ISOLINUX
-    evaluate_retval
+    evaluate_retval ; quit
 
     log_info_msg "mkdir -p $WORK"
     mkdir -p $WORK
-    evaluate_retval
+    evaluate_retval ; quit
 
     log_info_msg "rsync -av Aguarde, sincronizando diretorios..."
     rsync -av 				\
@@ -245,38 +299,44 @@ function sh_main(){
     --exclude=$BASE 		\
     / 						\
     $WORK > /dev/null 2>&1
-    evaluate_retval
+    evaluate_retval; quit
+
+    #log_info_msg "Binding chroot"
+	#for i in /dev /dev/pts /proc /sys /run /media /tmp ; do mount -B $i $WORK$i; done
+	#evaluate_retval
 
     log_info_msg "mount --bind /dev $WORKDEV"
     mount --bind /dev "$WORKDEV"
-    evaluate_retval
+    evaluate_retval; quit
 
     log_info_msg "mount -t devpts none $WORKDEVPTS"
     mount -t devpts none "$WORKDEVPTS"
-    evaluate_retval
+    evaluate_retval; quit
 
     log_info_msg "mount -t devpts none $WORKDEVPTS"
     mount --bind /proc "$WORKPROC"
-    evaluate_retval
+    evaluate_retval; quit
 
     log_info_msg "mount --bind /sys $WORKSYS"
     mount --bind /sys "$WORKSYS"
-    evaluate_retval
+    evaluate_retval; quit
 
     log_info_msg "mount --bind /media $WORKMEDIA"
     mount --bind /media "$WORKMEDIA"
-    evaluate_retval
+    evaluate_retval; quit
 
     log_info_msg "mount --bind /tmp $WORKTMP"
     mount --bind /tmp "$WORKTMP"
-    evaluate_retval
+    evaluate_retval; quit
 
+    log_info_msg "cp sqfs2 $WORK/root"
     cp sqfs2 $WORK/root
+	evaluate_retval; quit
 
     # Entrar no sistema chroot.
     log_info_msg "chroot $WORK /bin/bash"
     chroot $WORK /bin/bash -c "sh /root/sqfs2"
-    evaluate_retval
+    evaluate_retval; quit
 
     # FAZER AS MODIFICAÇÕES NECESSÁRIAS NO SISTEMA DE TRABALHO 
     # OU COPIE E EXECUTE sqfs2 no chroot
@@ -331,68 +391,38 @@ function sh_main(){
     rm -f $WORK/root/.bash_history 2> /dev/null
     evaluate_retval
 
-    log_info_msg "umount -rl $WORKPTS"
-    umount -rl "$WORKPTS" 2> /dev/null
-    evaluate_retval
-
-    log_info_msg "umount -rl $WORKDEV"
-    umount -rl "$WORKDEV" 2> /dev/null
-    evaluate_retval
-
-    log_info_msg "umount -rl $WORKPROC"
-    umount -rl "$WORKPROC" 2> /dev/null
-    evaluate_retval
-
-    log_info_msg "umount -rl $WORKSYS"
-    umount -rl "$WORKSYS" 2> /dev/null
-    evaluate_retval
-
-    log_info_msg "umount -rl $WORKMEDIA"
-    umount -rl "$WORKMEDIA" 2> /dev/null
-    evaluate_retval
-
-    log_info_msg "umount -rl $WORKTMP"
-    umount -rl "$WORKTMP" 2> /dev/null
-    evaluate_retval
-
     # A execução desses comandos é de extrema importância.
+	sh_unbind
+	sh_unbind
+	sh_unbind
 
     log_info_msg "cp -vp $WORK/boot/vmlinuz-$(uname -r) $BASE/cd/boot/vmlinuz"
     cp -vp $WORK/boot/vmlinuz-$(uname -r) $BASE/cd/boot/vmlinuz 2> /dev/null
-    evaluate_retval
+    evaluate_retval; quit
 
     log_info_msg "cp -vp $WORK/boot/initrd.img-$(uname -r) $BASE/cd/boot/initrd.gz"
-    cp -vp $WORK/boot/initrd.img-$(uname -r) $BASE/cd/boot/initrd.gz 2> /dev/null
-    evaluate_retval
+    #cp -vp $WORK/boot/initrd.img-$(uname -r) $BASE/cd/boot/initrd.gz 2> /dev/null
+    cp -vp $WORK/boot/initramfs-$(uname -r).img $BASE/cd/boot/initrd.gz 2> /dev/null
+    evaluate_retval ; quit
 
     log_info_msg "cp -vp $WORK/boot/memtest86+.bin $BASE/cd/boot/memtest"
     cp -vp $WORK/boot/memtest86+.bin $BASE/cd/boot/memtest 2> /dev/null
-    evaluate_retval
+    evaluate_retval;
 
     log_info_msg "Copiando syslinux.bin"
     find /boot -iname 'isolinux.bin' -exec cp -v {} $ISOLINUX \;
-    evaluate_retval
-
-    if [ $? != "0" ]; then
-        find /usr/lib/syslinux/ -iname 'isolinux.bin' -exec cp -v {} $ISOLINUX \;
-        evaluate_retval
-    fi
+    #find /usr/lib/syslinux/ -iname 'isolinux.bin' -exec cp -v {} $ISOLINUX \;
+    evaluate_retval; quit
 
     log_info_msg "Copiando vesamenu.c32"
     find /boot -iname 'vesamenu.c32' -exec cp -v {} $ISOLINUX \;
-    evaluate_retval
-    if [ $? != "0" ]; then
-        find /usr/lib/syslinux/ -iname 'vesamenu.c32' -exec cp -v {} $ISOLINUX \;
-        evaluate_retval
-    fi
+    #find /usr/lib/syslinux/ -iname 'vesamenu.c32' -exec cp -v {} $ISOLINUX \;
+    evaluate_retval; quit
 
     log_info_msg "Copiando menu.c32"
     find /boot -iname 'menu.c32'     -exec cp -v {} $ISOLINUX \;
-    evaluate_retval
-    if [ $? != "0" ]; then
-        find /usr/lib/syslinux/ -iname 'menu.c32'     -exec cp -v {} $ISOLINUX \;
-        evaluate_retval
-    fi
+    #find /usr/lib/syslinux/ -iname 'menu.c32'     -exec cp -v {} $ISOLINUX \;
+    evaluate_retval; quit
 
     log_info_msg "cat > $GRUB/menu.lst"
     cat > $GRUB/menu.lst << "_EOF_"
@@ -483,7 +513,7 @@ _EOF_
 
 _ISO_
 
-    evaluate_retval
+    evaluate_retval ; quit
 
     echo -e ""
     maxcol; replicate "=" $?
@@ -491,8 +521,8 @@ _ISO_
     evaluate_retval
 
     log_info_msg "mksquashfs $WORK $LIVE/filesystem.squashfs"
-    mksquashfs $WORK $LIVE/filesystem.squashfs -noappend
-    evaluate_retval
+	mksquashfs $WORK $LIVE/filesystem.squashfs -noappend
+    evaluate_retval ; quit
 
     log_info_msg "cd $BASE/cd && find . -type f -print0 | xargs -0 md5sum | tee $BASE/cd/md5sum.txt"
     cd $BASE/cd && find . -type f -print0 | xargs -0 md5sum | tee $BASE/cd/md5sum.txt
@@ -500,7 +530,7 @@ _ISO_
 
     log_info_msg "cd $BASE/cd"
     cd $BASE/cd
-    evaluate_retval
+    evaluate_retval ; quit
 
     echo -e ""
     maxcol; replicate "=" $?
@@ -508,15 +538,16 @@ _ISO_
     evaluate_retval
 
     log_info_msg "mkisofs"
+
     mkisofs	-b boot/isolinux/isolinux.bin 		\
     		-c boot/isolinux/boot.cat 			\
     		-no-emul-boot 						\
     		-boot-info-table 					\
-    		-V $label	 						\
-    		-cache-inodes -r -J -l -v			\
-    		-o "$XHOME"/live-cd.iso 			\
-    		/home/vcatafesta/$distro-live/cd
-    evaluate_retval
+    		-V "${MEDIALABEL}"					\
+    		-cache-inodes -R -J -l -v -d -N		\
+    		-o "${OUTFILE}"						\
+    		"${BASE}"/cd
+    evaluate_retval ; quit
 }
 clear
 echo -e ""

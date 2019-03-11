@@ -1,5 +1,5 @@
 #!/bin/bash
-declare -r version="v1.2.58-20190309"
+declare -r version="v1.6.35-20190311"
 #################################################################
 #       install dialog Mazon OS - $version                      #
 #								                                #
@@ -103,6 +103,7 @@ CURS_ZERO="\\033[0G"
 : ${xPARTSWAP=""}
 : ${xPARTEFI=""}
 : ${lEFI=$false}
+: ${LGRUB="EFI"}
 : ${LAUTOMATICA=$false}
 : ${xLABEL="MAZONOS"}
 
@@ -230,8 +231,11 @@ function sh_partitions(){
 }
 
 function arraylen(){
-    #arraylength=${#array[@]}
-    arraylength=${#"$1"[@]}
+    for item in ${array[*]}
+    do
+        printf "   %s\n" $item
+    done
+    arraylength=${"$1"[*]}
 }
 
 function timespec()
@@ -622,9 +626,11 @@ function sh_tailexectar(){
 }
 
 function sh_pvexectar(){
-    (pv -n $pwd/$tarball_default													\
-    |tar xJpf - -C $dir_install ) 2>&1 												\
-    |dialog	--title "** TAR **" --backtitle "$ccabec" --gauge "\n$cmsg_extracting" 	\
+    (pv -n $pwd/$tarball_default			            \
+    |tar xJpf - -C $dir_install ) 2>&1 		            \
+    |dialog	--title "** TAR **"                         \
+            --backtitle "$ccabec"                       \
+            --gauge "\n$cmsg_extracting: $dir_install" 	\
     7 60
 }
 
@@ -748,6 +754,52 @@ function sh_efi(){
 	fi
 }
 
+function sh_grubBIOS(){
+    cinfo=`log_info_msg "$cmsg_install_grub_disk: $sd"`
+    msg "INFO" "$cinfo"
+    chroot . /bin/bash -c "grub-install $sd" > /dev/null 2>&1
+    evaluate_retval
+    return $?
+}
+
+function sh_grubEFI(){
+    cinfo=`log_info_msg "$cmsg_Desmontando_particao: $sd"`
+    msg "INFO" "$cinfo"
+    umount -f -rl $xPARTEFI 2> /dev/null
+    evaluate_retval
+
+    cinfo=`log_info_msg "$cmsg_Formatando_particao: $sd"`
+    msg "INFO" "$cinfo"
+    mkfs.fat -F32 $xPARTEFI 2> /dev/null
+    evaluate_retval
+
+    cinfo=`log_info_msg "$cmsg_Montando_particao: $sd"`
+    msg "INFO" "$cinfo"
+    mount $xPARTEFI $dir_install/boot/EFI 2> /dev/null
+    evaluate_retval
+
+    cinfo=`log_info_msg "$cmsg_Instalando_GRUB_EFI_na_particao: $sd"`
+    msg "INFO" "$cinfo"
+    chroot . /bin/bash -c "grub-install     \
+        --target=x86_64-efi                 \
+        --efi-directory=/boot/EFI           \
+        --bootloader-id=mazon               \
+        --recheck">/dev/null 2>&1
+    evaluate_retval
+    return $?
+}
+
+function sh_grubmkconfig(){
+    cinfo=`log_info_msg "$cmsgGerando_arquivo_configuracao_do_grub"`
+    msg "INFO" "$cinfo"
+    chroot . /bin/bash -c "grub-mkconfig -o /boot/grub/grub.cfg" > /dev/null 2>&1
+    evaluate_retval
+    local nchoice=$?
+    echo "set menu_color_normal=green/black"  >> $dir_install/boot/grub/grub.cfg 2> /dev/null
+    echo "set menu_color_highlight=white/red" >> $dir_install/boot/grub/grub.cfg 2> /dev/null
+    return $nchoice
+}
+
 function grubinstall(){
 	if [ $LAUTOMATICA = $false ]; then
     	conf "*** GRUB ***" "$cGrubMsgInstall"
@@ -787,44 +839,18 @@ function grubinstall(){
                 nChoiceEFI=$?
             fi
             if [ $nChoiceEFI = $true ] ; then
-                cinfo=`log_info_msg "$cmsg_Desmontando_particao: $sd"`
-                msg "INFO" "$cinfo"
-                umount -f -rl $xPARTEFI 2> /dev/null
-                evaluate_retval
-
-                cinfo=`log_info_msg "$cmsg_Formatando_particao: $sd"`
-                msg "INFO" "$cinfo"
-                mkfs.fat -F32 $xPARTEFI 2> /dev/null
-                evaluate_retval
-
-                cinfo=`log_info_msg "$cmsg_Montando_particao: $sd"`
-                msg "INFO" "$cinfo"
-    	        mount $xPARTEFI $dir_install/boot/EFI 2> /dev/null
-                evaluate_retval
-
-                cinfo=`log_info_msg "$cmsg_Instalando_GRUB_EFI_na_particao: $sd"`
-                msg "INFO" "$cinfo"
-            	chroot . /bin/bash -c "grub-install                 \
-                                        --target=x86_64-efi         \
-                                        --efi-directory=/boot/EFI   \
-                                        --bootloader-id=mazon       \
-                                        --recheck">/dev/null 2>&1
-                evaluate_retval
+                if [ CEFI = "EFI" ]; then
+                    sh_grubEFI
+                else
+                    sh_grubBIOS
+                fi
             else
-                cinfo=`log_info_msg "$cmsg_install_grub_disk: $sd"`
-                msg "INFO" "$cinfo"
-                chroot . /bin/bash -c "grub-install $sd" > /dev/null 2>&1
-                evaluate_retval
+                sh_grubBIOS
             fi
-         else
-            cinfo=`log_info_msg "$cmsg_install_grub_disk: $sd"`
-            msg "INFO" "$cinfo"
-            chroot . /bin/bash -c "grub-install $sd" > /dev/null 2>&1
-            evaluate_retval
+        else
+            sh_grubBIOS
         fi
-	    chroot . /bin/bash -c "grub-mkconfig -o /boot/grub/grub.cfg" > /dev/null 2>&1
-        echo "set menu_color_normal=green/black"  >> $dir_install/boot/grub/grub.cfg 2> /dev/null
-        echo "set menu_color_highlight=white/red" >> $dir_install/boot/grub/grub.cfg 2> /dev/null
+        sh_grubmkconfig()
     	if [ $LAUTOMATICA = $false ]; then
     	    alerta "*** GRUB *** " "$sd" "\n\n$cgrubsuccess"
         fi
@@ -835,7 +861,6 @@ function grubinstall(){
 	if [ $STANDALONE = $false ]; then
 		sh_finish
 	fi
-	#sh_umountpartition
 }
 
 function sh_fstab(){
@@ -1324,17 +1349,31 @@ do
 	#disks=( $(fdisk -l | egrep -o '^/dev/sd[a-z]'| sed "s/$/ '*' /") )
 	#disks=( $(fdisk -l | cut -dk -f2 | grep -o /sd[a-z]))
 	#disks=($(ls /dev/sd* | grep -o '/dev/sd[a-z]' | cat | sort | uniq | sed "s/$/ '*' /"))
-	disks=($(fdisk -l | sed -n /sd[a-z]':'/p | awk '{print $2,$3$4}' | cut -d',' -f1 | sed 's/://g'|sort))
+	#disks=($(fdisk -l|sed -n '/sd[a-z]:/p'|awk '{print $2,$3$4}'|sed 's/://p'|sed 's/[,\t]*$//'))
+	devices=($(fdisk -l | egrep -o '^/dev/sd[a-z]'|uniq))
+    size=($(fdisk -l|sed -n '/sd[a-z]:/p'|awk '{print $3$4}'|sed 's/://p'|sed 's/[,\t]*$//'|awk '{printf "%10s\n", $1}'))
+    modelo=($(fdisk -l | grep -E "(Modelo|Model)"|sed 's/^[:\t]*//'|cut -d':' -f2 | sed 's/^[ \t]*//;s/[ \t]*$//'|sed 's/ /_/'))
+
 	LDISK=0
 	local xmsg=$cdisco
 	if [ $1 = "GRUB" ] ; then
 		xmsg=$1
 	fi
+    local array=()
+    local i=0
+    local x=0
+    local y=0
+    for i in ${devices[@]}
+    do
+        array[((n++))]=$i
+        array[((n++))]="[${size[((x++))]}]  ${modelo[((y++))]}"
+    done
+
 	sd=$(dialog 		 															\
 				--title 		"$xmsg"								  				\
 				--backtitle	 	"$ccabec"					 						\
 				--cancel-label 	"$buttonback"										\
-				--menu 			"\n$cmsg009" 0 50 0 "${disks[@]}" 2>&1 >/dev/tty 	)
+				--menu 			"\n$cmsg009" 0 50 0 "${array[@]}" 2>&1 >/dev/tty 	)
 
 	exit_status=$?
 	case $exit_status in
@@ -1367,9 +1406,17 @@ do
         if [ $LAUTOMATICA = $true ]; then
             return 0
         fi
- 		typefmt=$(dialog \
+        {   local item
+            index=0
+            for item in ${devices[*]}
+            do
+                [ $item = $sd ] && { break; }
+                ((index++))
+            done
+        }
+ 		typefmt=$(dialog                                                \
 	    	--stdout 													\
-	    	--title     	"$cmsg009" 									\
+	    	--title     	"$xmsg: $sd [${modelo[index]}]"        		\
 			--cancel-label	"$buttonback"								\
 	    	--menu		 	"$cmsg010"		 							\
 	    	0 0 0 														\
@@ -1734,6 +1781,7 @@ function pt_BR(){
     cmsgInstalacao_Automatica_cancelada="Instalacao Automatica cancelada"
     cmsgErro_na_formatacao="Erro na formatação"
     cmsgErro_no_particionamento="Erro no particionamento"
+    cmsgGerando_arquivo_configuracao_do_grub="Gerando arquivo de configuracao do grub"
 }
 
 function en_US(){
@@ -1869,6 +1917,7 @@ function en_US(){
     cmsgInstalacao_Automatica_cancelada="Automatic installation canceled"
     cmsgErro_na_formatacao="Error in formatting"
     cmsgErro_no_particionamento="Partitioning error"
+    cmsgGerando_arquivo_configuracao_do_grub="Generating Grub configuration file"
 }
 
 function scrend(){
@@ -2059,6 +2108,26 @@ function sh_automated_install(){
         zeravar
         sh_tools
     fi
+    mbr=$(dialog --radiolist 'Instalacao do GRUB:'      \
+        0 0 0                                           \
+        EFI     "Interface de Firmaware Extensivel" OFF \
+        BIOS    "Sistema Básico de Entrada e Saída" ON  \
+        2>&1 >/dev/tty )
+
+    exit_status=$?
+    case $exit_status in
+    $ESC)
+        info "$cmsgInstalacao_Automatica" "\n$Instalacao_Automatica_cancelada"
+        zeravar
+        sh_tools
+        ;;
+    $CANCEL)
+        info "$cmsgInstalacao_Automatica" "\n$Instalacao_Automatica_cancelada"
+        zeravar
+        sh_tools
+        ;;
+    esac
+    LGRUB=$mbr
 
     conf "$cmsgInstalacao_Automatica" "\nTudo pronto para iniciar a instalação. Continuar?"
     nChoice=$?
