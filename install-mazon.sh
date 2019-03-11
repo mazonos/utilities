@@ -1,5 +1,5 @@
 #!/bin/bash
-declare -r version="v1.6.40-20190311"
+declare -r version="v1.6.35-20190311"
 #################################################################
 #       install dialog Mazon OS - $version                      #
 #								                                #
@@ -412,15 +412,13 @@ function alerta(){
 	dialog 								        \
 			--title 	"$1" 			        \
 			--backtitle	"$ccabec"		        \
-			--msgbox 	"$2\n$3\n$4\n$5\n$6"  \
+			--msgbox 	"$2\n$3\n$4\n$5\n$6"    \
 			10 60
 }
 
 function info(){
 	dialog 			 					\
             --beep                      \
-    		--no-collapse				\
-            --no-cr-wrap                \
 			--title 	"$cmsg002"		\
 			--backtitle	"$ccabec"		\
 			--msgbox 	"$*" 			\
@@ -495,7 +493,6 @@ function sh_delpackageindex(){
     rm -f index.html* > /dev/null 2>&1
     evaluate_retval
     return $?
-
 }
 
 function sh_wgetpackageindex(){
@@ -1513,21 +1510,28 @@ function choosepartition(){
     local array=()
     local n=0
     local y=0
+    local x=0
 
     if [ $LDISK -eq 0 ]; then
-        local typesize=($(fdisk -l -o device,type,size | sed -n '/sd[a-z][0-9]/'p | sed 's/ /_/g'|sort))
-        local devices=($(fdisk -l -o Device|sed -n '/sd[a-z][0-9]/'p|sort))
-        local partitions=($(fdisk -l|sed -n '/sd[a-z][0-9]/'p|awk '{printf "%0s [%0s]__%0s_%0s\n", $1,$5,$7,$6}'))
+        local devices=($(fdisk -l -o Device|sed -n '/sd[a-z][0-9]/p'))
+        #local typesize=($(fdisk -l -o device,size,type|sed -n '/sd[a-z][0-9]/p'|awk '{printf "[%-5s]%0s %0s %0s %0s\n", $2, $3, $4, $5, $6}'|sed 's/[ \t]*$//'|sed 's/ /_/g'))
+        #local typesize=($(fdisk -l -o device,type,size | sed -n '/sd[a-z][0-9]/'p | sed 's/ /_/g'|sort))
+        #local partitions=($(fdisk -l|sed -n '/sd[a-z][0-9]/'p|awk '{printf "%0s [%0s]__%0s_%0s\n", $1,$5,$7,$6}'))
+        local size=($(fdisk -l  | sed -n /sd[a-z][0-9]/p | awk '{printf "(%7s)\n", $5}'|sed 's/ /_/g'))
+        local type=($(fdisk -l -o device,type|sed -n '/sd[a-z][0-9]/p'|awk '{printf "%-0s %0s %0s %0s %0s\n", $2, $3, $4, $5, $6}'|sed 's/[ \t]*$//'|sed 's/ /_/g'))
     else
-        local typesize=($(fdisk -l $sd -o device,type,size | sed -n '/sd[a-z][0-9]/'p | sed 's/ /_/g'|sort))
-        local devices=($(fdisk -l $sd -o Device|sed -n '/sd[a-z][0-9]/'p|sort))
-        local partitions=($(fdisk -l $sd|sed -n '/sd[a-z][0-9]/'p|awk '{printf "%0s [%0s]__%0s_%0s\n", $1,$5,$7,$6}'))
+        local devices=($(fdisk -l $sd -o Device|sed -n '/sd[a-z][0-9]/p'))
+        #local typesize=($(fdisk -l $sd -o device,type,size | sed -n '/sd[a-z][0-9]/'p | sed 's/ /_/g'|sort))
+        #local typesize=($(fdisk -l $sd -o device,size,type|sed -n '/sd[a-z][0-9]/p'|awk '{printf "[%-5s]%0s %0s %0s %0s\n", $2, $3, $4, $5, $6}'|sed 's/[ \t]*$//'|sed 's/ /_/g'))
+        #local partitions=($(fdisk -l $sd|sed -n '/sd[a-z][0-9]/'p|awk '{printf "%0s [%0s]__%0s_%0s\n", $1,$5,$7,$6}'))
+        local size=($(fdisk -l $sd | sed -n /sd[a-z][0-9]/p | awk '{printf "(%7s)\n", $5}'|sed 's/ /_/g'))
+        local type=($(fdisk -l $sd -o device,type|sed -n '/sd[a-z][0-9]/p'|awk '{printf "%-0s %0s %0s %0s %0s\n", $2, $3, $4, $5, $6}'|sed 's/[ \t]*$//'|sed 's/ /_/g'))
     fi
 
     for i in ${devices[@]}
     do
         array[((n++))]=$i
-        array[((n++))]=${typesize[((y++))]}
+        array[((n++))]="${size[((y++))]} ${type[((x++))]}"
     done
 
 	part=$(dialog 														\
@@ -2082,6 +2086,7 @@ function zeravar(){
     : ${LMOUNT=0}
     : ${LAUTOMATICA=$false}
 }
+
 function sh_automated_install(){
     confmulti "$cmsgInstalacao_Automatica"                  \
         "\nNeste modo a instalação será toda automatizada"  \
@@ -2097,14 +2102,14 @@ function sh_automated_install(){
     menuinstall
     nChoice=$?
     if [ $nChoice = $false ]; then
-        info "$cmsgInstalacao_Automatica" "\n$Instalacao_Automatica_cancelada"
+        info "$cmsgInstalacao_Automatica" "\n$cmsgInstalacao_Automatica_cancelada"
         zeravar
         sh_tools
     fi
     choosedisk
     nChoice=$?
     if [ $nChoice = $false ]; then
-        info "$cmsgInstalacao_Automatica" "\n$Instalacao_Automatica_cancelada"
+        info "$cmsgInstalacao_Automatica" "\n$cmsgInstalacao_Automatica_cancelada"
         zeravar
         sh_tools
     fi
@@ -2117,12 +2122,12 @@ function sh_automated_install(){
     exit_status=$?
     case $exit_status in
     $ESC)
-        info "$cmsgInstalacao_Automatica" "\n$Instalacao_Automatica_cancelada"
+        info "$cmsgInstalacao_Automatica" "\n$cmsgInstalacao_Automatica_cancelada"
         zeravar
         sh_tools
         ;;
     $CANCEL)
-        info "$cmsgInstalacao_Automatica" "\n$Instalacao_Automatica_cancelada"
+        info "$cmsgInstalacao_Automatica" "\n$cmsgInstalacao_Automatica_cancelada"
         zeravar
         sh_tools
         ;;
@@ -2132,25 +2137,26 @@ function sh_automated_install(){
     conf "$cmsgInstalacao_Automatica" "\nTudo pronto para iniciar a instalação. Continuar?"
     nChoice=$?
     if [ $nChoice = $false ]; then
-        info "$cmsgInstalacao_Automatica" "\n$Instalacao_Automatica_cancelada"
+        info "$cmsgInstalacao_Automatica" "\n$cmsgInstalacao_Automatica_cancelada"
         zeravar
         sh_tools
     fi
     sh_partnewbie
     nChoice=$?
     if [ $nChoice = $false ]; then
-        info "$cmsgInstalacao_Automatica" "\n$Erro_no_particionamento!\n\n$Instalacao_Automatica_cancelada"
+        info "$cmsgInstalacao_Automatica" "\n$Erro_no_particionamento!\n\n$cmsgInstalacao_Automatica_cancelada"
         zeravar
         sh_tools
     fi
     sh_domkfs
     nChoice=$?
     if [ $nChoice = $false ]; then
-        info "$cmsgInstalacao_Automatica" "\n$Erro_na_formatacao!\n\n$Instalacao_Automatica_cancelada"
+        info "$cmsgInstalacao_Automatica" "\n$Erro_na_formatacao!\n\n$cmsgInstalacao_Automatica_cancelada"
         zeravar
         sh_tools
     fi
     sh_wgetdefault
+    zeravar
 }
 
 # Init - configuracao inicial
