@@ -549,11 +549,46 @@ _ISO_
     		"${BASE}"/cd
     evaluate_retval ; quit
 }
+
+function sh_checkroot(){
+    if [ "$(id -u)" != "0" ]; then
+        clear
+        echo -e "\nINFO: You should run this script as root!" 
+        exit
+    fi
+}
+
+function sh_checksoftware(){
+    test -e /usr/bin/which
+    if [ $? = 1 ] ; then
+        echo "-- Required program(s) not found in PATH!"
+        echo "** which"
+        echo "-- Exiting."
+        exit 1
+    fi
+
+    PROG_MISSING=""
+    for PROGN in qemu-system-x86_64 mksquashfs unsquashfs cpio dracut grub-mkfont grub-mkimage syslinux mkisofs rsync mkdosfs ; do
+        if ! which $PROGN 1>/dev/null 2>/dev/null ; then
+            PROG_MISSING="${PROG_MISSING}--   $PROGN\n"
+        fi
+    done
+    if [ ! -z "$PROG_MISSING" ] ; then
+        maxcol; replicate "=" $?
+        echo "-- Required program(s) not found in PATH!"
+        echo -e ${PROG_MISSING}
+        echo "-- Exiting."
+        maxcol; replicate "=" $?
+        exit 1
+    fi
+}
+
 clear
+sh_checkroot
+sh_checksoftware
 echo -e ""
 maxcol; replicate "=" $?
 log_info_msg "Iniciando a criacao da ISO LIVE"
 evaluate_retval
 maxcol; replicate "=" $?
 sh_main
-
