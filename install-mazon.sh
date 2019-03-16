@@ -1,5 +1,5 @@
 #!/bin/bash
-declare -r version="v1.6.35-20190311"
+declare -r version="v1.7.02-20190316"
 #################################################################
 #       install dialog Mazon OS - $version                      #
 #								                                #
