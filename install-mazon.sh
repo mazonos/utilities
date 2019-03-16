@@ -19,6 +19,8 @@ declare -r version="v1.6.35-20190311"
 : ${D_ITEM_HELP=4}
 : ${D_ESC=255}
 
+#Downloader
+DOWNLOADER="curl -L -O -C - "
 #hex codigo
 barra=$'\x5c'
 
@@ -128,6 +130,7 @@ declare -r welcome="Welcome to the $ccabec"
 declare -r site="$chost.com"
 declare -r xemail="root@mazonos.com"
 declare -r dir_install="/mnt/$chost"
+declare -r url_release="http://$site/releases"
 declare -r url_distro="http://$site/releases/"
 declare -r pwd=$PWD
 declare -r cfstab=$dir_install"/etc/fstab"
@@ -447,7 +450,7 @@ function confmulti(){
 			return $?
 }
 
-function inkey(){
+function inkey1(){
     dialog								\
 			--title 	"$2" 			\
 			--backtitle	"$ccabec"		\
@@ -462,12 +465,13 @@ function quit(){
 # functions script
 
 function sh_choosepackage(){
-    pkt=($(cat index.html \
-        | grep .xz.sha256sum \
-        | awk '{print $2}' \
-        | sed 's/<a href=\"//g' \
-        | cut -d'"' -f3 | sed 's/>//g' \
-        | sed 's/<\/a//g' \
+    pkt=($(cat releases                 \
+        | grep .xz.sha256sum            \
+        | awk '{print $2}'              \
+        | sed 's/<a href=\"//g'         \
+        | cut -d'"' -f3                 \
+        | sed 's/>//g'                  \
+        | sed 's/<\/a//g'               \
         | sed 's/.sha256sum//g'))
 
     if echo "${pkt[0]}" | grep 'minimal' >/dev/null
@@ -490,7 +494,7 @@ function sh_choosepackage(){
 function sh_delpackageindex(){
     ret=`log_info_msg "$cmsgdelpackageindex"`
     msg "INFO" "$ret"
-    rm -f index.html* > /dev/null 2>&1
+    rm -f releases* > /dev/null 2>&1
     evaluate_retval
     return $?
 }
@@ -498,7 +502,8 @@ function sh_delpackageindex(){
 function sh_wgetpackageindex(){
     ret=`log_info_msg "$cmsg_wget_package_index"`
     msg "INFO" "$ret"
-    wget $url_distro > /dev/null 2>&1
+    #wget $url_distro > /dev/null 2>&1
+    $DOWNLOADER $url_release > /dev/null 2>&1
     evaluate_retval
     return $?
 }
@@ -524,7 +529,8 @@ function sh_wgetsha256sum(){
 	clinksha=$url_distro$sha256_default
     ret=`log_info_msg "$cmsggetshasum"`
     msg "INFO" "$ret"
-    wget -q $clinksha > /dev/null 2>&1
+    #wget -q $clinksha > /dev/null 2>&1
+    $DOWNLOADER $clinksha > /dev/null 2>&1
     evaluate_retval
     return $?
 }
@@ -919,10 +925,14 @@ function sh_finish(){
 function sh_wgettarball(){
 	local URL=$url_distro$tarball_default
 
-	wget -c $URL 2>&1 														\
-	| stdbuf -o0 awk '/[.] +[0-9][0-9]?[0-9]?%/ { print substr($0,63,3) }' 	\
-	| dialog --title "$plswait" --backtitle "$ccabec" --gauge "\n\n$URL" 9 70
-	return $?
+#	wget -c $URL 2>&1 														\
+#	| stdbuf -o0 awk '/[.] +[0-9][0-9]?[0-9]?%/ { print substr($0,63,3) }' 	\
+#	| dialog --title "$plswait" --backtitle "$ccabec" --gauge "\n\n$URL" 9 70
+#	return $?
+
+    (pv -n | $DOWNLOADER $URL)  2>&1                                                   \
+    | dialog --title "$plswait" --backtitle "$ccabec" --gauge "\n\n$URL" 9 70
+    return $?
 }
 
 function sh_wgetdefault(){
@@ -1016,7 +1026,6 @@ function sh_wgetdefault(){
     		local nchoice=$?
     		case $nchoice in
     			$D_OK)
-    				#wget -c $URL;;
     				sh_wgetsha256sum
     				sh_wgettarball
     				sh_testsha256sum
@@ -1514,15 +1523,11 @@ function choosepartition(){
 
     if [ $LDISK -eq 0 ]; then
         local devices=($(fdisk -l -o Device|sed -n '/sd[a-z][0-9]/p'))
-        #local typesize=($(fdisk -l -o device,size,type|sed -n '/sd[a-z][0-9]/p'|awk '{printf "[%-5s]%0s %0s %0s %0s\n", $2, $3, $4, $5, $6}'|sed 's/[ \t]*$//'|sed 's/ /_/g'))
-        #local typesize=($(fdisk -l -o device,type,size | sed -n '/sd[a-z][0-9]/'p | sed 's/ /_/g'|sort))
         #local partitions=($(fdisk -l|sed -n '/sd[a-z][0-9]/'p|awk '{printf "%0s [%0s]__%0s_%0s\n", $1,$5,$7,$6}'))
         local size=($(fdisk -l  | sed -n /sd[a-z][0-9]/p | awk '{printf "(%7s)\n", $5}'|sed 's/ /_/g'))
         local type=($(fdisk -l -o device,type|sed -n '/sd[a-z][0-9]/p'|awk '{printf "%-0s %0s %0s %0s %0s\n", $2, $3, $4, $5, $6}'|sed 's/[ \t]*$//'|sed 's/ /_/g'))
     else
         local devices=($(fdisk -l $sd -o Device|sed -n '/sd[a-z][0-9]/p'))
-        #local typesize=($(fdisk -l $sd -o device,type,size | sed -n '/sd[a-z][0-9]/'p | sed 's/ /_/g'|sort))
-        #local typesize=($(fdisk -l $sd -o device,size,type|sed -n '/sd[a-z][0-9]/p'|awk '{printf "[%-5s]%0s %0s %0s %0s\n", $2, $3, $4, $5, $6}'|sed 's/[ \t]*$//'|sed 's/ /_/g'))
         #local partitions=($(fdisk -l $sd|sed -n '/sd[a-z][0-9]/'p|awk '{printf "%0s [%0s]__%0s_%0s\n", $1,$5,$7,$6}'))
         local size=($(fdisk -l $sd | sed -n /sd[a-z][0-9]/p | awk '{printf "(%7s)\n", $5}'|sed 's/ /_/g'))
         local type=($(fdisk -l $sd -o device,type|sed -n '/sd[a-z][0-9]/p'|awk '{printf "%-0s %0s %0s %0s %0s\n", $2, $3, $4, $5, $6}'|sed 's/[ \t]*$//'|sed 's/ /_/g'))
@@ -2006,7 +2011,7 @@ function sh_packagedisp(){
 	sh_delpackageindex
 	sh_wgetpackageindex
 
-    pkt=($(cat index.html               \
+    pkt=($(cat releases                 \
         | grep .xz                      \
         | awk '{print $2, $5}'          \
         | sed 's/<a href=\"//g'         \
