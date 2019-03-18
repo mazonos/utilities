@@ -1429,7 +1429,7 @@ function choosedisk(){
     	    	--stdout 													\
     	    	--title     	"$xmsg: $sd [${modelo[index]}]"        		\
     			--cancel-label	"$buttonback"								\
-    	    	--menu		 	"$cmsg010"		 							\
+    	    	--menu		 	"\n$cmsg010"		 						\
     	    	0 0 0 														\
     	    	"$cexpert"  	"$cmsg011"							 	 	\
     	    	"$cnewbie"     	"$cmsg013"				   		     		)
@@ -1629,7 +1629,7 @@ function sh_format(){
 function scrmain(){
 	while true
 	do
-		sd=$(ls /dev/sd*)
+		#sd=$(ls /dev/sd*)
 		main=$(dialog 														\
 				--stdout                                                  	\
 				--backtitle 	"$ccabec"									\
@@ -1675,7 +1675,7 @@ function pt_BR(){
 	cmsg004="Escolha uma opção:"
 	cmsgBaixar_pacote_de_instalacao="Baixar pacote de instalacao"
 	cmsg006="Particionar Disco"
-	cmsg007="Escolher partição para instalar"
+	cmsg007="Escolha partição"
 	cmsg008="Sair do instalador"
 	cmsgquit="Sair do instalador"
 	cmsg009="Escolha o disco:"
@@ -1812,7 +1812,7 @@ function en_US(){
 	cmsg004="Choose an option:"
 	cmsgBaixar_pacote_de_instalacao="Download installation package"
 	cmsg006="Partition Disk"
-	cmsg007="Choose partition to install"
+	cmsg007="Choose partition"
 	cmsg008="Quit the installer"
 	cmsgquit="Quit the installer"
 	cmsg009="Choose the disk:"
