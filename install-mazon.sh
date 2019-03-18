@@ -1,5 +1,5 @@
 #!/bin/bash
-declare -r version="v1.7.02-20190316"
+declare -r version="v1.7.60-20190318"
 #################################################################
 #       install dialog Mazon OS - $version                      #
 #								                                #
@@ -357,8 +357,7 @@ function evaluate_retval()
 
 function is_true()
 {
-   [ "$1" = "1" ] || [ "$1" = "yes" ] || [ "$1" = "true" ] ||  [ "$1" = "y" ] ||
-   [ "$1" = "t" ]
+   [ "$1" = "1" ] || [ "$1" = "yes" ] || [ "$1" = "true" ] ||  [ "$1" = "y" ] || [ "$1" = "t" ]
 }
 
 
@@ -376,7 +375,6 @@ function msg(){
     else
         log_info_msg "$2"
     fi
-
 }
 
 function mensagem(){
@@ -936,6 +934,9 @@ function sh_wgettarball(){
 }
 
 function sh_wgetdefault(){
+    sh_check_install
+  	cd $dir_install
+
 	sh_testarota
 	if [ $? = $false ]; then
 		info "\n$cmsgnoroute"
@@ -1058,7 +1059,7 @@ function sh_wgetdefault(){
        	local ninit=$?
    		case $ninit in
     		$D_OK)
-	    		sh_check_install
+	    		sh_startinstall
    				;;
 
     		$D_CANCEL)
@@ -1067,15 +1068,15 @@ function sh_wgetdefault(){
     			;;
    		esac
    	else
-  		sh_check_install
+  		sh_startinstall
    	fi
 }
 
 function sh_check_install(){
-	if [ $LDISK -eq 0 ]; then
-		choosedisk
-	fi
 	if [ $LPARTITION -eq 0 ]; then
+    	#if [ $LDISK -eq 0 ]; then
+	    #	choosedisk
+    	#fi
 		choosepartition
 		if [ $LPARTITION -eq 0 ]; then
 			info "\n$cancelinst"
@@ -1108,7 +1109,10 @@ function sh_check_install(){
     			;;
     	esac
     fi
+}
 
+function sh_startinstall(){
+  	cd $dir_install
 	sh_exectar
 	if [ $? = 1 ]; then
 		conf "*** ERRO ***" "$cmsg_erro_tar_continue"
@@ -1173,7 +1177,7 @@ function menuinstall(){
 			--backtitle 	"$ccabec"							\
 			--cancel-label	"$buttonback"						\
 			--title			'FULL INSTALATION'					\
-			--menu			"$cchooseX:"						\
+			--menu			"\n$cchooseX:"						\
 			0 0 0                               		    	\
 			XFCE4			"$cxfce4"							\
 			i3WM			"$ci3wm"							)
@@ -1308,14 +1312,15 @@ function sh_checksimple(){
 }
 
 function sh_checkpartition(){
-	cpart=$(df -h | grep "$part" | awk '{print $1, $2, $3, $4, $5, $6, $7}')
-	#dsk=$(df | grep $part | cut -c 1-})
-	#dsk=$(df -h | grep ^$part)
-	#dsk=$(df -h | grep "$part")
+	#cpart=$(df -h | grep $part | awk '{print $1, $2, $3, $4, $5, $6, $7}')
+	#cpart=$(df -h | sed '/$part/!d')
+	#cpart=$(df -h | grep ^$part)
+	#cpart=$(df -h | grep "$part")
+	cpart=$(df | grep $part | cut -c 1-)
 
 	local nchoice=0
 	if [ "$cpart" <> " " ]; then
-		conf "$cwarning" "\n$cmsg_conf_dismount\n\n$cpart\n\n$cmsg_dismount"
+		conf "** $part **" "\n$cmsgA_particao_esta_montada!\n\n$cpart\n\n$cmsg_dismount"
 		nchoice=$?
 		if [ $nchoice = $true ]; then
 			umount -f -rl $part 2> /dev/null
@@ -1348,117 +1353,117 @@ function sh_partnewbie(){
 }
 
 function choosedisk(){
-while true
-do
-	# escolha o disco a ser particionado // Choose disk to be parted
-	################################################################
-	#disks=( $(fdisk -l | egrep -o '^/dev/sd[a-z]'| sed "s/$/ '*' /") )
-	#disks=( $(fdisk -l | cut -dk -f2 | grep -o /sd[a-z]))
-	#disks=($(ls /dev/sd* | grep -o '/dev/sd[a-z]' | cat | sort | uniq | sed "s/$/ '*' /"))
-	#disks=($(fdisk -l|sed -n '/sd[a-z]:/p'|awk '{print $2,$3$4}'|sed 's/://p'|sed 's/[,\t]*$//'))
-	devices=($(fdisk -l | egrep -o '^/dev/sd[a-z]'|uniq))
-    size=($(fdisk -l|sed -n '/sd[a-z]:/p'|awk '{print $3$4}'|sed 's/://p'|sed 's/[,\t]*$//'|awk '{printf "%10s\n", $1}'))
-    modelo=($(fdisk -l | grep -E "(Modelo|Model)"|sed 's/^[:\t]*//'|cut -d':' -f2 | sed 's/^[ \t]*//;s/[ \t]*$//'|sed 's/ /_/'))
-
-	LDISK=0
-	local xmsg=$cdisco
-	if [ $1 = "GRUB" ] ; then
-		xmsg=$1
-	fi
-    local array=()
-    local i=0
-    local x=0
-    local y=0
-    for i in ${devices[@]}
+    while true
     do
-        array[((n++))]=$i
-        array[((n++))]="[${size[((x++))]}]  ${modelo[((y++))]}"
+    	# escolha o disco a ser particionado // Choose disk to be parted
+    	################################################################
+    	#disks=( $(fdisk -l | egrep -o '^/dev/sd[a-z]'| sed "s/$/ '*' /") )
+    	#disks=( $(fdisk -l | cut -dk -f2 | grep -o /sd[a-z]))
+    	#disks=($(ls /dev/sd* | grep -o '/dev/sd[a-z]' | cat | sort | uniq | sed "s/$/ '*' /"))
+    	#disks=($(fdisk -l|sed -n '/sd[a-z]:/p'|awk '{print $2,$3$4}'|sed 's/://p'|sed 's/[,\t]*$//'))
+    	devices=($(fdisk -l | egrep -o '/dev/sd[a-z]'|uniq))
+        size=($(fdisk -l|sed -n '/sd[a-z]:/p'|awk '{print $3$4}'|sed 's/://p'|sed 's/[,\t]*$//'|awk '{printf "%10s\n", $1}'))
+        modelo=($(fdisk -l | grep -E "(Modelo|Model)"|sed 's/^[:\t]*//'|cut -d':' -f2 | sed 's/^[ \t]*//;s/[ \t]*$//'|sed 's/ /_/'))
+
+    	LDISK=0
+    	local xmsg=$cdisco
+    	if [ $1 = "GRUB" ] ; then
+    		xmsg=$1
+    	fi
+        local array=()
+        local i=0
+        local x=0
+        local y=0
+        for i in ${devices[@]}
+        do
+            array[((n++))]=$i
+            array[((n++))]="[${size[((x++))]}]  ${modelo[((y++))]}"
+        done
+
+    	sd=$(dialog 		 															\
+    				--title 		"$xmsg"								  				\
+    				--backtitle	 	"$ccabec"					 						\
+    				--cancel-label 	"$buttonback"										\
+    				--menu 			"\n$cmsg009" 0 50 0 "${array[@]}" 2>&1 >/dev/tty 	)
+
+    	exit_status=$?
+    	case $exit_status in
+    		$ESC)
+                if [ $LAUTOMATICA = $true ]; then
+                    return 1
+                fi
+    			scrmain
+    			;;
+    		$CANCEL)
+                if [ $LAUTOMATICA = $true ]; then
+                    return 1
+                fi
+    			scrmain
+    			;;
+    	esac
+
+    	if [ $1 = "SEE" ] ; then
+    		local result=$( fdisk -l $sd )
+    		display_result "$result" "$csmg013" "$cmsg_part_disk"
+    		continue
+    	fi
+
+    	if [ $1 = "GRUB" ] ; then
+    		LDISK=1
+    		return 0
+    	fi
+
+    	if [ $sd <> 0 ]; then
+            if [ $LAUTOMATICA = $true ]; then
+                return 0
+            fi
+            {   local item
+                index=0
+                for item in ${devices[*]}
+                do
+                    [ $item = $sd ] && { break; }
+                    ((index++))
+                done
+            }
+     		typefmt=$(dialog                                                \
+    	    	--stdout 													\
+    	    	--title     	"$xmsg: $sd [${modelo[index]}]"        		\
+    			--cancel-label	"$buttonback"								\
+    	    	--menu		 	"$cmsg010"		 							\
+    	    	0 0 0 														\
+    	    	"$cexpert"  	"$cmsg011"							 	 	\
+    	    	"$cnewbie"     	"$cmsg013"				   		     		)
+
+    			case "$typefmt" in
+    				$cexpert)
+    					sh_checksimple
+    					cfdisk $sd
+    					LDISK=1
+    					local result=$( fdisk -l $sd )
+    				    display_result "$result" "$cmsg011"
+    					;;
+
+    				$cnewbie)
+    					sh_checkdisk
+    					local nmontada=$?
+    					if [ $nmontada = 1 ]; then
+    						alerta "CHOOSEDISK" "$cmsg_nec_dismount"
+    						choosedisk
+    					fi
+    					conf "$cmsgTodos_os_dados_serao_perdidos" "\n$cmsgTodos_os_dados_serao_perdidos\n$cmsg014"
+    					local nb=$?
+    					case $nb in
+    						$D_OK)
+                                sh_partnewbie
+    							local result=$( fdisk -l $sd )
+    						    display_result "$result" "$csmg013"
+    							;;
+    					esac
+    					;;
+    	    	esac
+    	fi
+    	break
     done
-
-	sd=$(dialog 		 															\
-				--title 		"$xmsg"								  				\
-				--backtitle	 	"$ccabec"					 						\
-				--cancel-label 	"$buttonback"										\
-				--menu 			"\n$cmsg009" 0 50 0 "${array[@]}" 2>&1 >/dev/tty 	)
-
-	exit_status=$?
-	case $exit_status in
-		$ESC)
-            if [ $LAUTOMATICA = $true ]; then
-                return 1
-            fi
-			scrmain
-			;;
-		$CANCEL)
-            if [ $LAUTOMATICA = $true ]; then
-                return 1
-            fi
-			scrmain
-			;;
-	esac
-
-	if [ $1 = "SEE" ] ; then
-		local result=$( fdisk -l $sd )
-		display_result "$result" "$csmg013" "$cmsg_part_disk"
-		continue
-	fi
-
-	if [ $1 = "GRUB" ] ; then
-		LDISK=1
-		return 0
-	fi
-
-	if [ $sd <> 0 ]; then
-        if [ $LAUTOMATICA = $true ]; then
-            return 0
-        fi
-        {   local item
-            index=0
-            for item in ${devices[*]}
-            do
-                [ $item = $sd ] && { break; }
-                ((index++))
-            done
-        }
- 		typefmt=$(dialog                                                \
-	    	--stdout 													\
-	    	--title     	"$xmsg: $sd [${modelo[index]}]"        		\
-			--cancel-label	"$buttonback"								\
-	    	--menu		 	"$cmsg010"		 							\
-	    	0 0 0 														\
-	    	"$cexpert"  	"$cmsg011"							 	 	\
-	    	"$cnewbie"     	"$cmsg013"				   		     		)
-
-			case "$typefmt" in
-				$cexpert)
-					sh_checksimple
-					cfdisk $sd
-					LDISK=1
-					local result=$( fdisk -l $sd )
-				    display_result "$result" "$cmsg011"
-					;;
-
-				$cnewbie)
-					sh_checkdisk
-					local nmontada=$?
-					if [ $nmontada = 1 ]; then
-						alerta "CHOOSEDISK" "$cmsg_nec_dismount"
-						choosedisk
-					fi
-					conf "$cmsg020" "\n$cmsg020\n$cmsg014"
-					local nb=$?
-					case $nb in
-						$D_OK)
-                            sh_partnewbie
-							local result=$( fdisk -l $sd )
-						    display_result "$result" "$csmg013"
-							;;
-					esac
-					;;
-	    	esac
-	fi
-	break
-done
 }
 
 function sh_umountpartition(){
@@ -1478,7 +1483,7 @@ function sh_mountpartition(){
 	do
 		umount -f -rl $part 2> /dev/null
 		mount $part $dir_install 2> /dev/null
-		if [ $? = 32 ]; then # monta?
+		if [ $? = 32 ]; then # montada?
 			conf "** MOUNT **" "$cmsg_try_mount_partition"
             if [ $? = 0 ]; then
 				#loop
@@ -1527,7 +1532,7 @@ function choosepartition(){
         local size=($(fdisk -l  | sed -n /sd[a-z][0-9]/p | awk '{printf "(%7s)\n", $5}'|sed 's/ /_/g'))
         local type=($(fdisk -l -o device,type|sed -n '/sd[a-z][0-9]/p'|awk '{printf "%-0s %0s %0s %0s %0s\n", $2, $3, $4, $5, $6}'|sed 's/[ \t]*$//'|sed 's/ /_/g'))
     else
-        local devices=($(fdisk -l $sd -o Device|sed -n '/sd[a-z][0-9]/p'))
+        local devices=($(fdisk -l $sd -o device|sed -n '/sd[a-z][0-9]/p'))
         #local partitions=($(fdisk -l $sd|sed -n '/sd[a-z][0-9]/'p|awk '{printf "%0s [%0s]__%0s_%0s\n", $1,$5,$7,$6}'))
         local size=($(fdisk -l $sd | sed -n /sd[a-z][0-9]/p | awk '{printf "(%7s)\n", $5}'|sed 's/ /_/g'))
         local type=($(fdisk -l $sd -o device,type|sed -n '/sd[a-z][0-9]/p'|awk '{printf "%-0s %0s %0s %0s %0s\n", $2, $3, $4, $5, $6}'|sed 's/[ \t]*$//'|sed 's/ /_/g'))
@@ -1539,7 +1544,7 @@ function choosepartition(){
         array[((n++))]="${size[((y++))]} ${type[((x++))]}"
     done
 
-	part=$(dialog 														\
+	part=$(dialog                                                       \
 			--title 		"$cparticao"					  			\
 			--backtitle	 	"$ccabec"					 				\
 			--cancel-label	"$buttonback"								\
@@ -1550,17 +1555,20 @@ function choosepartition(){
 	exit_status=$?
 	case $exit_status in
 		$ESC)
+            ${LDISK=0}
 			LPARTITION=0
 			#scrend 1
 			#exit 1
 			scrmain
 			;;
 		$CANCEL)
+            ${LDISK=0}
 			LPARTITION=0
 			#scrend 0
 			scrmain
 			;;
 	esac
+    ${LDISK=1}
 	LPARTITION=1
 	#sh_format
 	#sh_mountpartition
@@ -1587,6 +1595,7 @@ function sh_domkfs(){
         LFORMAT=0
     fi
     return $nchoice
+
 }
 
 function sh_format(){
@@ -1596,10 +1605,10 @@ function sh_format(){
 
 	if [ $nmontada = 0 ] ; then
 		LFORMAT=0
-	    conf " *** FORMAT *** " "\n   $cmsg020 \n\n   $cmsg021 $part ?"
+	    conf " *** FORMAT *** " "\n   $cmsgTodos_os_dados_serao_perdidos \n\n   $cmsg021 $part ?"
 		format=$?
 		if [ $format = 0 ] ; then
-            do_mkfs
+            sh_domkfs
 			local nfmt=$?
 			if [ $nfmt = 0 ] ; then
 				sh_mkswap
@@ -1685,7 +1694,7 @@ function pt_BR(){
 	cmsgversion=$cmsg015
 	cmsg018="Baixar pacote full (X)"
 	cmsg019="Baixar pacote minimal"
-	cmsg020="** AVISO ** Todos os dados serão perdidos!"
+	cmsgTodos_os_dados_serao_perdidos="** AVISO ** Todos os dados serão perdidos!"
 	cmsg021="Formatar partição"
 	menuquit="Sair"
 	menustep="Passo a passo"
@@ -1710,7 +1719,7 @@ function pt_BR(){
 	#				\n\n*Lembrando que ainda não temos suporte a dual boot. \
 	#				\nSe precisar de dual boot, use o grub de outra distribuição com:\n# update-grub"
 	cGrubMsgInstall="Você gostaria de instalar o GRUB?"
-	cchooseX="Escolha o seu ambiente de Desktop:"
+	cchooseX="Escolha o seu ambiente de Desktop"
 	cxfce4="Clássico e poderoso!"
 	ci3wm="Desktop para caras avançados B)."
 	cmsgmin="Instalação mínima, sem X"
@@ -1761,7 +1770,7 @@ function pt_BR(){
 	cmsg_nec_dismount="Necessário desmontar particao para reparticionar automaticamente."
 	cwarning="** AVISO **"
 	cmsg_alert_mount="Só para lembrar que o disco contém partições montadas."
-	cmsg_conf_dismount="A partição está montada."
+	cmsgA_particao_esta_montada="A partição está montada"
 	cmsg_dismount="Desmontar?"
 	cmsg_all_mounted_part="O disco selecionado contém partições montadas."
 	cmsg_umount_partition="Aguarde, Desmontando particao de trabalho."
@@ -1821,7 +1830,7 @@ function en_US(){
 	cancelinst="Installation canceled!"
 	cancelbind="Chroot canceled!"
 	cmsg018="Download full package (X)"
-	cmsg020="** NOTICE ** Will data will be lost!"
+	cmsgTodos_os_dados_serao_perdidos="** NOTICE ** Will data will be lost!"
 	cmsg021="Format partition"
 	menuquit="Quit"
 	menustep="Step by step"
@@ -1846,7 +1855,7 @@ function en_US(){
     #  				\n\n*Remembering that we do not yet have dual boot support. \
     #				\nIf use dualboot, use the grub from its other distribution with:\n# update-grub"
 	cGrubMsgInstall="Would you like to install grub?"
-	cchooseX="Choose your Desktop Environment:"
+	cchooseX="Choose your Desktop Environment"
 	cxfce4="Classic and powerfull!"
 	ci3wm="Desktop for avanced guys B)."
 	cmsgmin="Minimum installation, not X"
@@ -1897,7 +1906,7 @@ function en_US(){
 	cmsg_nec_dismount="Need to dismount partition to repartition automatically."
 	cwarning="** WARNING **"
 	cmsg_alert_mount="Just to remember that the disk contains mounted partitions."
-	cmsg_conf_dismount="The partition is mounted."
+	cmsgA_particao_esta_montada="The partition is mounted"
 	cmsg_dismount="Disassemble?"
 	cmsg_all_mounted_part="The selected disk contains mounted partitions."
 	cmsg_umount_partition="Please wait, dismantling the working partition."
