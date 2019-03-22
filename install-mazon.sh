@@ -19,6 +19,12 @@ declare -r version="v1.7.60-20190318"
 : ${D_ITEM_HELP=4}
 : ${D_ESC=255}
 
+
+#SQFS
+MEDIUM=/lib/initramfs/system
+LIVE=/lib/initramfs/medium/isolinux/venomlive
+#mount -t squashfs -o ro,loop $MEDIUM/filesystem/root.sfs /mnt
+
 #Downloader
 DOWNLOADER="curl -L -O -C - "
 #hex codigo
@@ -634,7 +640,6 @@ function sh_pvexectar(){
             --gauge "\n$cmsg_extracting: $dir_install" 	\
     7 60
 }
-
 
 function sh_exectar(){
 	local nret
@@ -1641,7 +1646,8 @@ function scrmain(){
 		        2 "$cmsg006"						  						\
 		        3 "$cmsg007"												\
 			   	4 "Install"	   					     						\
-			   	5 "$ctools"							     					)
+			   	5 "$ctools"							     					\
+			   	6 "Live install"					     					)
 
 				exit_status=$?
 				case $exit_status in
@@ -1661,6 +1667,7 @@ function scrmain(){
 					3) choosepartition;;
 					4) menuinstall;;
 					5) sh_tools;;
+					6) sh_liveinstall;;
 				esac
 	done
 }
@@ -1706,7 +1713,7 @@ function pt_BR(){
 	cdlok4="\n\nIniciar a instalação agora?"
 	cshaok="\n[OK] Checksum verificado com sucesso."
     plswait="Por favor aguarde, baixando pacote..."
-	cfinish="Instalação completa! Boas vibes.\nReboot para iniciar com $cdistro Linux.\n\nBugs? $xemail"
+	cfinish="Instalação completa!\nReboot para iniciar com $cdistro Linux.\n\nBugs? $xemail"
 	cgrubsuccess="GRUB instalado com sucesso!"
 	ccancelgrub="Instalação do GRUB cancelada!"
 	cmsgInstalar_GRUB="Instalar GRUB"
@@ -1842,7 +1849,7 @@ function en_US(){
 	cdlok4="\n\nStart the installation now?"
 	cshaok="\n[OK] Checksum successfully verified."
     plswait="Please wait, Downloading package..."
-	cfinish="Install Complete! Good vibes. \nReboot to start with $cdistro Linux. \n\nBugs? $xemail"
+	cfinish="Install Complete!\nReboot to start with $cdistro Linux. \n\nBugs? $xemail"
 	cgrubsuccess="GRUB successfully installed!"
 	ccancelgrub="Installing grub canceled!"
 	cmsgInstalar_GRUB="Install GRUB"
@@ -1966,6 +1973,12 @@ function sh_testdialog(){
 		scrend 1
 	fi
 	grafico=$xswap_grafico
+}
+
+function sh_testlive(){
+	test -e $LIVE
+	local nchoice=$?
+	return $nchoice
 }
 
 
@@ -2170,6 +2183,109 @@ function sh_automated_install(){
         sh_tools
     fi
     sh_wgetdefault
+    zeravar
+}
+
+function sh_pvexecrsync(){
+    NUMFILES=$(ls -R $MEDIUM | wc -l)
+    rsync -ravp --info=progress2 $MEDIUM/ $dir_install/ | grep -o "[0-9]*%" | tr -d '%' \
+    |dialog --title "** RSYNC **" --backtitle "$ccabec" --gauge "\n$cmsg_extracting:$dir_install" 7 60
+}
+
+function sh_tailexecrsync(){
+    {
+        cd $dir_install
+        rsync -ravp $MEDIUM/ $dir_install/
+        nret=$?
+        echo
+        echo
+        echo "COPIA EFETUADA COM SUCESSO. TECLE ALGO"
+    } > out &
+    dialog  --title "**RSYNC**"                   \
+        --begin 10 10 --tailboxbg out 04 120      \
+        --and-widget                              \
+        --begin 3 10 --msgbox "Aguarde" 5 30
+    rm -f out > /dev/null 2>&1
+    return $nret
+}
+
+function sh_wgetsqfs(){
+    sh_check_install
+  	cd $dir_install
+    sh_tailexecrsync
+}
+
+function sh_liveinstall(){
+    confmulti "$cmsgInstalacao_Automatica"                  \
+        "\nNeste modo a instalação será toda automatizada"  \
+        "\n\nDeseja continuar e escolher o disco destino?"
+
+    local nChoice=$?
+    if [ $nChoice = $false ]; then
+        LAUTOMATICA=$false
+        sh_tools
+    fi
+    LAUTOMATICA=$true
+    choosedisk
+    nChoice=$?
+    if [ $nChoice = $false ]; then
+        info "$cmsgInstalacao_Automatica" "\n$cmsgInstalacao_Automatica_cancelada"
+        zeravar
+        sh_tools
+    fi
+    mbr=$(dialog --radiolist 'Instalacao do GRUB:'      \
+        0 0 0                                           \
+        EFI     "Interface de Firmaware Extensivel" OFF \
+        BIOS    "Sistema Básico de Entrada e Saída" ON  \
+        2>&1 >/dev/tty )
+
+    exit_status=$?
+    case $exit_status in
+    $ESC)
+        info "$cmsgInstalacao_Automatica" "\n$cmsgInstalacao_Automatica_cancelada"
+        zeravar
+        sh_tools
+        ;;
+    $CANCEL)
+        info "$cmsgInstalacao_Automatica" "\n$cmsgInstalacao_Automatica_cancelada"
+        zeravar
+        sh_tools
+        ;;
+    esac
+    LGRUB=$mbr
+
+    conf "$cmsgInstalacao_Automatica" "\nTudo pronto para iniciar a instalação. Continuar?"
+    nChoice=$?
+    if [ $nChoice = $false ]; then
+        info "$cmsgInstalacao_Automatica" "\n$cmsgInstalacao_Automatica_cancelada"
+        zeravar
+        sh_tools
+    fi
+    sh_partnewbie
+    nChoice=$?
+    if [ $nChoice = $false ]; then
+        info "$cmsgInstalacao_Automatica" "\n$Erro_no_particionamento!\n\n$cmsgInstalacao_Automatica_cancelada"
+        zeravar
+        sh_tools
+    fi
+    sh_domkfs
+    nChoice=$?
+    if [ $nChoice = $false ]; then
+        info "$cmsgInstalacao_Automatica" "\n$Erro_na_formatacao!\n\n$cmsgInstalacao_Automatica_cancelada"
+        zeravar
+        sh_tools
+    fi
+    sh_wgetsqfs
+    sh_fstab
+	sh_initbind
+
+	if [ $LAUTOMATICA = $false ]; then
+    	conf "*** ADDUSER ***" "\n$cconfusernow?"
+    	if [ $? = $true ]; then
+    		sh_confadduser
+    	fi
+    fi
+	grubinstall
     zeravar
 }
 
