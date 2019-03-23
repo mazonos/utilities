@@ -1,5 +1,5 @@
 #!/bin/bash
-declare -r version="v1.8.21-20190322"
+declare -r version="v1.9.17-20190323"
 #################################################################
 #       install dialog Mazon OS - $version                      #
 #								                                #
@@ -19,7 +19,6 @@ declare -r version="v1.8.21-20190322"
 : ${D_ITEM_HELP=4}
 : ${D_ESC=255}
 
-
 #SQFS
 ROOTSQFS=/lib/initramfs/medium/filesystem/root.sfs
 MEDIUM=/lib/initramfs/system
@@ -28,7 +27,8 @@ LIVE=/lib/initramfs/medium/isolinux/venomlive
 
 #Downloader
 DOWNLOADER="curl -L -O -C - "
-#hex codigo
+
+#hex code
 barra=$'\x5c'
 
 # sfdisk type
@@ -467,8 +467,6 @@ function quit(){
 	[ $? -ne 0 ] && { clear ; exit ;}
 }
 
-# functions script
-
 function sh_choosepackage(){
     pkt=($(cat releases                 \
         | grep .xz.sha256sum            \
@@ -709,7 +707,6 @@ function sh_initbind(){
             \nmount $xdev : $ldev     \
             \nmount $xrun : $lrun"
 }
-
 
 function sh_bind(){
     if [ $# -lt 1 ] ; then
@@ -1293,11 +1290,6 @@ function menuinstall(){
            	;;
 		esac
 	done
-
-	# grub install
-	#######################
-   	#grubinstall
-	#sh_finish
 }
 
 function sh_checkdisk(){
@@ -1366,12 +1358,14 @@ function sh_partnewbie(){
 	if [ $xMEMSWAP = "" ] ; then
 		xMEMSWAP = "2G" ]
 	fi
+
     #flock $sd sfdisk --delete --force $sd  > /dev/null 2>&1
     echo -e ",400M,$nEFI\n,1M,$nBIOS\n,$xMEMSWAP,$nSWAP\n,;" \
     | flock $sd sfdisk --wipe=always --wipe-partitions=always --force --label=gpt $sd > /dev/null 2>&1
     udevadm settle > /dev/null 2>&1
     evaluate_retval
 	LDISK=1
+
     if [ $LAUTOMATICA = $true ]; then
         part=$sd"4"
         LPARTITION=1
@@ -1499,7 +1493,6 @@ function sh_umountpartition(){
 	umount -rl $part 2> /dev/null
 	LMOUNT=0
 	cd $pwd
-	#menuinstall
 }
 
 function sh_mountpartition(){
@@ -1578,20 +1571,20 @@ function choosepartition(){
 	exit_status=$?
 	case $exit_status in
 		$ESC)
-            ${LDISK=0}
+            LDISK=0
 			LPARTITION=0
 			#scrend 1
 			#exit 1
 			scrmain
 			;;
 		$CANCEL)
-            ${LDISK=0}
+            LDISK=0
 			LPARTITION=0
 			#scrend 0
 			scrmain
 			;;
 	esac
-    ${LDISK=1}
+    LDISK=1
 	LPARTITION=1
 	#sh_format
 	#sh_mountpartition
@@ -1602,14 +1595,15 @@ function sh_mkswap(){
 	xPARTSWAP=$result
 
 	if [ "$result" != "" ] ; then
+		mensagem "$cmsg_Formatando_particao swap"
 		xUUIDSWAP=$(mkswap $result | grep UUID | awk '{print $3 }')
 	fi
 }
 
 function sh_domkfs(){
-   	mensagem "Desmontando partição: $part"
+   	mensagem "$cmsg_Desmontando_particao: $part"
     umount -rl $part 2> /dev/null
-   	mensagem "Formatando partição: $part"
+   	mensagem "$cmsg_Formatando_particao: $part"
     mkfs -t ext4 -L "$xLABEL" $part > /dev/null 2>&1
     local nchoice=$?
     if [ $nchoice = $true ]; then
@@ -1825,6 +1819,8 @@ function pt_BR(){
     cmsgErro_na_formatacao="Erro na formatação"
     cmsgErro_no_particionamento="Erro no particionamento"
     cmsgGerando_arquivo_configuracao_do_grub="Gerando arquivo de configuracao do grub"
+	cmsgNeste_modo_a_instalacao_sera_automatizada="Neste modo a instalação será automatizada"
+	cmsgDeseja_continuar_e_escolher_o_disco_destino="Deseja continuar e escolher o disco destino"
 }
 
 function en_US(){
@@ -1961,6 +1957,8 @@ function en_US(){
     cmsgErro_na_formatacao="Error in formatting"
     cmsgErro_no_particionamento="Partitioning error"
     cmsgGerando_arquivo_configuracao_do_grub="Generating Grub configuration file"
+	cmsgNeste_modo_a_instalacao_sera_automatizada="In this mode an installation will be automated"
+	cmsgDeseja_continuar_e_escolher_o_disco_destino="Do you want to continue and choose the destination disk"
 }
 
 function scrend(){
@@ -2002,6 +2000,9 @@ function sh_testlive(){
 function init(){
 	sh_testdialog
 	sh_checkroot
+    sh_testlive
+    live=$?
+
 	while true; do
 		i18=$(dialog													\
 			--stdout                                                  	\
@@ -2028,11 +2029,19 @@ function init(){
 			case $i18 in
 				1)
 					pt_BR
-					scrmain
+                    if [ $live = $true ]; then
+                        sh_liveinstall
+                    else
+    					scrmain
+                    fi
 					;;
 				2)
 					en_US
-					scrmain
+                    if [ $live = $true ]; then
+                        sh_liveinstall
+                    else
+    					scrmain
+                    fi
 					;;
 				3)
 					dialog --no-collapse --title "$cdistro Wiki" --msgbox "$wiki" 0 0
@@ -2079,7 +2088,6 @@ function sh_packagedisp(){
             ;;
      esac
 }
-
 
 sh_tools(){
 	while true
@@ -2134,11 +2142,10 @@ function zeravar(){
 }
 
 function sh_automated_install(){
-    confmulti "$cmsgInstalacao_Automatica"                  \
-        "\nNeste modo a instalação será toda automatizada"  \
-        "bastando escolher o pacote e o disco destino"      \
-        "\n\nDeseja continuar e escolher o tipo de instalação e disco destino?"
-
+	confmulti 	"$cmsgInstalacao_Automatica"                  		\
+				"\n$cmsgNeste_modo_a_instalacao_sera_automatizada"	\
+				"bastando escolher o pacote e o disco destino"      \
+        		"\n\n$cmsgDeseja_continuar_e_escolher_o_disco_destino?"
     local nChoice=$?
     if [ $nChoice = $false ]; then
         zeravar
@@ -2241,9 +2248,9 @@ function sh_wgetsqfs(){
 }
 
 function sh_liveinstall(){
-    confmulti "$cmsgInstalacao_Automatica"                  \
-        "\nNeste modo a instalação será toda automatizada"  \
-        "\n\nDeseja continuar e escolher o disco destino?"
+	confmulti 	"$cmsgInstalacao_Automatica"                  		\
+				"\n$cmsgNeste_modo_a_instalacao_sera_automatizada"	\
+        		"\n\n$cmsgDeseja_continuar_e_escolher_o_disco_destino?"
 
     local nChoice=$?
     if [ $nChoice = $false ]; then
@@ -2260,8 +2267,8 @@ function sh_liveinstall(){
     fi
     mbr=$(dialog --radiolist 'Instalacao do GRUB:'      \
         0 0 0                                           \
-        EFI     "Interface de Firmaware Extensivel" OFF \
-        BIOS    "Sistema Básico de Entrada e Saída" ON  \
+        EFI     "Interface de Firmaware Extensivel" off \
+        BIOS    "Sistema Básico de Entrada e Saída" on 	\
         2>&1 >/dev/tty )
 
     exit_status=$?
@@ -2300,6 +2307,7 @@ function sh_liveinstall(){
         zeravar
         sh_tools
     fi
+	sh_mkswap
     sh_wgetsqfs
     sh_fstab
 	sh_initbind
@@ -2317,8 +2325,8 @@ init
 :<<'LIXO'
 Passagem padrão original de Lorem Ipsum, usada desde o século XVI.
 
-"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure 
-dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non 
+"Lorem ipsum dolor sit amet, consectetur adipiscing elit, do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure
+dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
 proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
 'LIXO'
