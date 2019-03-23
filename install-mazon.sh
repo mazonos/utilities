@@ -2255,7 +2255,7 @@ function sh_liveinstall(){
     local nChoice=$?
     if [ $nChoice = $false ]; then
         LAUTOMATICA=$false
-        sh_tools
+        scrmain
     fi
     LAUTOMATICA=$true
     choosedisk
