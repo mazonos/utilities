@@ -3,6 +3,8 @@
 # written by Alexander E. Patrakov and Jeremy Huntwork.
 # Adapted by Emmett1 to use with Venom Linux
 
+# EVERTHING USE EN_US-UTF8 FOR CREATE INITRD.
+
 copy()
 {
 	local file
