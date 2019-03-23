@@ -596,7 +596,7 @@ function sh_confadduser(){
 			--title 			"USERADD" 							\
 			--form 				"$ccreatenewuser"					\
 	12 50 0 														\
-		"Username : " 1 1 "$cuser"        1 13 10 0 				\
+		"Username : " 1 1 "$cuser"        1 13 20 0 				\
 		"Password : " 2 1 "$cpass"        2 13 20 0 				\
 		"Hostname : " 3 1 "$chost"        3 13 20 0					\
 	2>&1 1>&3 | {
@@ -894,16 +894,28 @@ function sh_fstab(){
     	fi
     fi
 
+    sh_testlive
+    live=$?
+
 	mkdir -p $dir_install/etc >/dev/null
 	xuuid=$(blkid | grep $part | awk '{print $3}')
 	label="/            ext4     defaults            1     1"
-	sed -ir "/<xxx>/ i $xuuid $label" $cfstab
-	sed -i 's|/dev/<xxx>|#'$part'|g' $cfstab
+
+    if [ $live = $false ]; then
+    	sed -ir "/<xxx>/ i $xuuid $label" $cfstab
+	    sed -i 's|/dev/<xxx>|#'$part'|g' $cfstab
+    else
+        echo -e "$xuuid $label" >> $cfstab
+    fi
 
 	if [ $xUUIDSWAP != "" ]; then
 		label="swap         swap     pri=1               0     0"
-		sed -ir "/<yyy>/ i $xUUIDSWAP $label" $cfstab
-		sed -i 's|/dev/<yyy>|'$xPARTSWAP'|g' $cfstab
+        if [ $live = $false ]; then
+        	sed -ir "/<yyy>/ i $xUUIDSWAP $label" $cfstab
+    		sed -i 's|/dev/<yyy>|'$xPARTSWAP'|g' $cfstab
+        else
+            echo -e "$xUUIDSWAP $label" >> $cfstab
+        fi
 	fi
 
 	if [ $STANDALONE = $true ]; then
@@ -1317,6 +1329,15 @@ function sh_checksimple(){
 	return $nchoice
 }
 
+function sh_umountall(){
+    local nconta=$(ls /dev/sda[0-9]|wc -l)
+    local i
+    for i in $(seq 1 $nconta); do
+        mensagem "Desmontando partição: $sd$i"
+        umount -f -rl $sd$i 2> /dev/null
+    done
+}
+
 function sh_checkpartition(){
 	#cpart=$(df -h | grep $part | awk '{print $1, $2, $3, $4, $5, $6, $7}')
 	#cpart=$(df -h | sed '/$part/!d')
@@ -1339,16 +1360,16 @@ function sh_checkpartition(){
 function sh_partnewbie(){
     cinfo=`log_info_msg "$cmsg_prepare_disk $sd"`
     msg "INFO" "$cinfo"
+    sh_umountall
+
     local xMEMSWAP=$(free | grep Mem | awk '{ print $2}')
 	if [ $xMEMSWAP = "" ] ; then
 		xMEMSWAP = "2G" ]
 	fi
-    sfdisk -f --delete $sd > /dev/null 2>&1
-	echo "label: gpt" | sfdisk --force $sd > /dev/null 2>&1
-	echo "size=400M, type=$nEFI" | sfdisk -a --force $sd > /dev/null 2>&1
-	echo "size=1M, type=$nBIOS" | sfdisk -a --force $sd > /dev/null 2>&1
-	echo "size=$xMEMSWAP, type=$nSWAP" | sfdisk -a --force $sd > /dev/null 2>&1
-	echo ";" | sfdisk -a --force $sd > /dev/null 2>&1
+    #flock $sd sfdisk --delete --force $sd  > /dev/null 2>&1
+    echo -e ",400M,$nEFI\n,1M,$nBIOS\n,$xMEMSWAP,$nSWAP\n,;" \
+    | flock $sd sfdisk --wipe=always --wipe-partitions=always --force --label=gpt $sd > /dev/null 2>&1
+    udevadm settle > /dev/null 2>&1
     evaluate_retval
 	LDISK=1
     if [ $LAUTOMATICA = $true ]; then
@@ -1419,7 +1440,7 @@ function choosedisk(){
     		return 0
     	fi
 
-    	if [ $sd != '' ]; then
+    	if [ $sd != "" ]; then
             if [ $LAUTOMATICA = $true ]; then
                 return 0
             fi
@@ -1491,12 +1512,7 @@ function sh_mountpartition(){
 		umount -f -rl $part 2> /dev/null
 		mount $part $dir_install 2> /dev/null
 		if [ $? = 32 ]; then # montada?
-			conf "** MOUNT **" "$cmsg_try_mount_partition"
-            if [ $? = 0 ]; then
-				#loop
-				continue
-			fi
-           	LMOUNT=0
+           	LMOUNT=1
 			break
 		fi
 		if [ $? = 1 ]; then # fail?
@@ -1591,9 +1607,9 @@ function sh_mkswap(){
 }
 
 function sh_domkfs(){
-    # WARNING! FORMAT PARTITION
-    #######################
+   	mensagem "Desmontando partição: $part"
     umount -rl $part 2> /dev/null
+   	mensagem "Formatando partição: $part"
     mkfs -t ext4 -L "$xLABEL" $part > /dev/null 2>&1
     local nchoice=$?
     if [ $nchoice = $true ]; then
@@ -1983,7 +1999,6 @@ function sh_testlive(){
 	return $nchoice
 }
 
-
 function init(){
 	sh_testdialog
 	sh_checkroot
@@ -2109,11 +2124,13 @@ sh_tools(){
 }
 
 function zeravar(){
-    : ${LDISK=0}
-    : ${LPARTITION=0}
-    : ${LFORMAT=0}
-    : ${LMOUNT=0}
-    : ${LAUTOMATICA=$false}
+    sd=""
+    part=""
+    LDISK=0
+    LPARTITION=0
+    LFORMAT=0
+    LMOUNT=0
+    LAUTOMATICA=$false
 }
 
 function sh_automated_install(){
@@ -2124,7 +2141,7 @@ function sh_automated_install(){
 
     local nChoice=$?
     if [ $nChoice = $false ]; then
-        LAUTOMATICA=$false
+        zeravar
         sh_tools
     fi
     LAUTOMATICA=$true
@@ -2219,8 +2236,8 @@ function sh_tailexecrsync(){
 function sh_wgetsqfs(){
     sh_check_install
   	cd $dir_install
-    #sh_tailexecrsync
-	sh_pvexecrunsquashfs
+    sh_tailexecrsync
+	#sh_pvexecrunsquashfs
 }
 
 function sh_liveinstall(){
