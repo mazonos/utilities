@@ -1,5 +1,5 @@
 #!/bin/bash
-declare -r version="v1.7.60-20190318"
+declare -r version="v1.8.20-20190322"
 #################################################################
 #       install dialog Mazon OS - $version                      #
 #								                                #
@@ -21,6 +21,7 @@ declare -r version="v1.7.60-20190318"
 
 
 #SQFS
+ROOTSQFS=/lib/initramfs/medium/filesystem/root.sfs
 MEDIUM=/lib/initramfs/system
 LIVE=/lib/initramfs/medium/isolinux/venomlive
 #mount -t squashfs -o ro,loop $MEDIUM/filesystem/root.sfs /mnt
@@ -1592,7 +1593,7 @@ function sh_domkfs(){
     # WARNING! FORMAT PARTITION
     #######################
     umount -rl $part 2> /dev/null
-    mkfs -F -t ext4 -L "$xLABEL" $part > /dev/null 2>&1
+    mkfs -t ext4 -L "$xLABEL" $part > /dev/null 2>&1
     local nchoice=$?
     if [ $nchoice = $true ]; then
         LFORMAT=1
@@ -2178,7 +2179,7 @@ function sh_automated_install(){
     sh_domkfs
     nChoice=$?
     if [ $nChoice = $false ]; then
-        info "$cmsgInstalacao_Automatica" "\n$Erro_na_formatacao!\n\n$cmsgInstalacao_Automatica_cancelada"
+        info "$cmsgInstalacao_Automatica" "\n$cmsgErro_na_formatacao!\n\n$cmsgInstalacao_Automatica_cancelada"
         zeravar
         sh_tools
     fi
@@ -2190,6 +2191,11 @@ function sh_pvexecrsync(){
     NUMFILES=$(ls -R $MEDIUM | wc -l)
     rsync -ravp --info=progress2 $MEDIUM/ $dir_install/ | grep -o "[0-9]*%" | tr -d '%' \
     |dialog --title "** RSYNC **" --backtitle "$ccabec" --gauge "\n$cmsg_extracting:$dir_install" 7 60
+}
+
+function sh_pvexecrunsquashfs(){
+	unsquashfs -f -d $dir_install $ROOTSQFS | grep -o "[0-9]*%" | tr -d '%' \
+    |dialog --title "** UNQUASHING **" --backtitle "$ccabec" --gauge "\n$cmsg_extracting:$dir_install" 7 60
 }
 
 function sh_tailexecrsync(){
@@ -2212,7 +2218,8 @@ function sh_tailexecrsync(){
 function sh_wgetsqfs(){
     sh_check_install
   	cd $dir_install
-    sh_tailexecrsync
+    #sh_tailexecrsync
+	sh_pvexecrunsquashfs
 }
 
 function sh_liveinstall(){
@@ -2271,20 +2278,17 @@ function sh_liveinstall(){
     sh_domkfs
     nChoice=$?
     if [ $nChoice = $false ]; then
-        info "$cmsgInstalacao_Automatica" "\n$Erro_na_formatacao!\n\n$cmsgInstalacao_Automatica_cancelada"
+        info "$cmsgInstalacao_Automatica" "\n$cmsgErro_na_formatacao!\n\n$cmsgInstalacao_Automatica_cancelada"
         zeravar
         sh_tools
     fi
     sh_wgetsqfs
     sh_fstab
 	sh_initbind
-
-	if [ $LAUTOMATICA = $false ]; then
-    	conf "*** ADDUSER ***" "\n$cconfusernow?"
-    	if [ $? = $true ]; then
-    		sh_confadduser
-    	fi
-    fi
+   	conf "*** ADDUSER ***" "\n$cconfusernow?"
+   	if [ $? = $true ]; then
+   		sh_confadduser
+   	fi
 	grubinstall
     zeravar
 }
