@@ -1,0 +1,32 @@
+Date:                    2019-03-04
+Initial Package Version: 4.3
+Upstream Status:         Not Applicable
+Origin:                  Self
+Description:             Include sys/sysmacros.h
+			 The major, minor & makedev macros are not supposed to be included
+			 with sys/types.h but glibc has done this against POSIX standards.
+
+diff --git a/mksquashfs.c b/mksquashfs.c
+index 86f82bb..43d0921 100644
+--- a/mksquashfs.c
++++ b/mksquashfs.c
+@@ -50,6 +50,7 @@
+ #include <sys/wait.h>
+ #include <limits.h>
+ #include <ctype.h>
++#include <sys/sysmacros.h>
+ 
+ #ifndef linux
+ #define __BYTE_ORDER BYTE_ORDER
+diff --git a/unsquashfs.c b/unsquashfs.c
+index 1323dd6..31e9f2c 100644
+--- a/unsquashfs.c
++++ b/unsquashfs.c
+@@ -37,6 +37,7 @@
+ #include <sys/resource.h>
+ #include <limits.h>
+ #include <ctype.h>
++#include <sys/sysmacros.h>
+ 
+ struct cache *fragment_cache, *data_cache;
+ struct queue *to_reader, *to_inflate, *to_writer, *from_writer;
