@@ -1,5 +1,5 @@
 #!/bin/bash
-declare -r version="v1.8.20-20190322"
+declare -r version="v1.8.21-20190322"
 #################################################################
 #       install dialog Mazon OS - $version                      #
 #								                                #
@@ -1408,18 +1408,18 @@ function choosedisk(){
     			;;
     	esac
 
-    	if [ $1 = "SEE" ] ; then
+    	if [ "$1" = "SEE" ] ; then
     		local result=$( fdisk -l $sd )
     		display_result "$result" "$csmg013" "$cmsg_part_disk"
     		continue
     	fi
 
-    	if [ $1 = "GRUB" ] ; then
+    	if [ "$1" = "GRUB" ] ; then
     		LDISK=1
     		return 0
     	fi
 
-    	if [ $sd <> 0 ]; then
+    	if [ $sd != '' ]; then
             if [ $LAUTOMATICA = $true ]; then
                 return 0
             fi
@@ -1431,6 +1431,7 @@ function choosedisk(){
                     ((index++))
                 done
             }
+
      		typefmt=$(dialog                                                \
     	    	--stdout 													\
     	    	--title     	"$xmsg: $sd [${modelo[index]}]"        		\
