@@ -1,8 +1,0 @@
-#!/bin/bash
-echo -e "1-) Subprocess\n2-) Vlc playlist"
-echo "Choose option: " ; read op
-if [ $op = '1' ] || [ $op = '' ] ; then
-	cvlc https://cdn.live.nextdial.com.br/listen/aradiorock?aid=5b649a4d538bc00e7a5d0962 &
-else
-	vlc -I curses https://cdn.live.nextdial.com.br/listen/aradiorock?aid=5b649a4d538bc00e7a5d0962
-fi
