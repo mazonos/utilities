@@ -1,0 +1,46 @@
+#!/bin/bash
+##################################################
+# Script install VirtualBox 6.0.4  .             #
+# autor: Diego Sarzi <diegosarzi@gmail.com>      #
+# licence: MIT                                   #
+##################################################
+
+check=$(uname -r)
+if [ $check = '4.18.5-mazonos' ]; then
+	echo "Kernel Check ----- OK"
+else
+	echo "Update you kernel to 4.18.5"
+	echo "Download in http://mazonos.com/packages/base/linux-4.18.5.mz and use banana -i for install."
+	exit
+fi
+
+# download headers
+echo "Download linux-headers..."
+wget http://mazonos.com/packages/base/linux_headers-4.18.5-1.mz
+
+# install headers
+echo "Install linux_headers-4.18-1.10, please wait..."
+banana -i linux_headers-4.18.5-1.mz
+
+# download virtualbox
+######################
+echo "Downloading VirtualBox-6.0.4..."
+wget https://download.virtualbox.org/virtualbox/6.0.4/VirtualBox-6.0.4-128413-Linux_amd64.run
+
+# permission
+#####################
+chmod +x VirtualBox-6.0.4-128413-Linux_amd64.run
+# execute
+echo "Install VirtualBox-6.0.4"
+./VirtualBox-6.0.4-128413-Linux_amd64.run
+
+# clean files
+####################
+echo "Clean flies..."
+rm -f linux_headers-4.18.5-1.mz
+rm -f VirtualBox-*
+
+# exit
+####################
+echo "VirtualBox instal sucessful!"
+echo "Run: $ VirtualBox"
