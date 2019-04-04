@@ -14,6 +14,7 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 VARLIB="/var/lib/mzsearch"
+UPGRADELIB="var/lib/mzupgrade"
 
 helpMe(){
 	echo -e "usage: mzsearch [-u] [--update] or <package> \n \
@@ -30,17 +31,16 @@ fi
 
 # upgrade system
 if [[ $1 = "--upgrade" ]]; then
-	cd /tmp
-	wget http://mazonos.com/upgrade.sh
-	cat upgrade.sh | grep "###"
-	read -p "Are we going to upgrade the system? [Y/n]: " yn
-	if [[ $install = "" ]] || [ $install = 'y' ] || [ $install = 'Y' ]; then
-		chmod +x upgrade.sh
-		./upgrade.sh
-		echo "System upgraded."
-		exit 0
+	if [[ ! -e /var/lib/mzupgrade ]]; then
+		mkdir /var/lib/mzupgrade
+		echo "0" > /var/lib/mzupgrade/version
 	fi
-exit 0
+	
+	cd /tmp
+	wget --no-verbose http://mazonos.com/upgrade.sh
+	chmod +x upgrade.sh
+	./upgrade.sh
+	exit 0
 fi
 
 # update
