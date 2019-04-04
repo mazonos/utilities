@@ -19,12 +19,25 @@ helpMe(){
 	echo -e "usage: mzsearch [-u] [--update] or <package> \n \
 ------ LIST OPTIONS ------- \n \
 -u, --update     Update list packages in repositore online. Need Internet.\n \
-ex: mzsearch nano # for search."
+--upgrade        Upgrade system base and bugs.\n
+ex: mzsearch nano # for search and install."
 	exit
 }
 
 if [[ $1 = "" ]] || [ $1 = "-h" ] || [ $1 = "--help" ]; then
 	helpMe
+fi
+
+# upgrade system
+if [[ $1 = "--upgrade" ]]; then
+	cd /tmp
+	wget http://mazonos.com/upgrade.sh
+	cat upgrade.sh | grep "###"
+	read -p "Are we going to upgrade the system? [Y/n]: " yn
+	if [[ $install = "" ]] || [ $install = 'y' ] || [ $install = 'Y' ]; then
+		chmod +x upgrade.sh
+		./upgrade.sh
+	fi
 fi
 
 # update
