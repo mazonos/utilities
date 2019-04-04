@@ -37,7 +37,10 @@ if [[ $1 = "--upgrade" ]]; then
 	if [[ $install = "" ]] || [ $install = 'y' ] || [ $install = 'Y' ]; then
 		chmod +x upgrade.sh
 		./upgrade.sh
+		echo "System upgraded."
+		exit 0
 	fi
+exit 0
 fi
 
 # update
